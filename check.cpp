@@ -15,11 +15,8 @@
 #include <unistd.h>
 #include <dirent.h>
 
-#include "common.h"
 #include "cutils/properties.h"
 #include "cutils/android_reboot.h"
-#include "install.h"
-#include "minui/minui.h"
 #include "minzip/DirUtil.h"
 #include "minzip/SysUtil.h"
 #include "roots.h"
@@ -28,7 +25,7 @@
 #include "device.h"
 
 #include "minzip/Zip.h"
-#include "root_check.h"
+#include "check.h"
 extern "C" {
     #include "cr32.h"
     #include "md5.h"
@@ -51,11 +48,10 @@ static char* file_to_pass[]={
                               "recovery_rootcheck",
                               "build.prop",
                               "S_ANDRO_SFL.ini",
-                              "recovery.sig"
+                              "recovery.sig",
+                              "checkmd5"
                     };
 
-
-static const char *IMAGE_LOAD_PATH ="/tmp/rootcheck/";
 static const char *TEMP_FILE_IN_RAM="/tmp/system_dencrypt";
 static const char *TEMP_IMAGE_IN_RAM="/tmp/image_dencrypt";
 static const char *CRC_COUNT_TMP="/tmp/crc_count";
@@ -77,44 +73,12 @@ static struct last_check_file*check_file_result;
 
 int root_to_check[MAX_ROOT_TO_CHECK]={0};
 
-extern RecoveryUI* ui;
-
-img_name_t img_array[PART_MAX] = { 
-#ifdef MTK_ROOT_PRELOADER_CHECK
-    {"/dev/preloader", "preloader"},
-#endif
-    {"/dev/uboot", "uboot"},
-    {"/dev/bootimg", "bootimg"},
-    {"/dev/recovery", "recoveryimg"},
-    {"/dev/logo", "logo"},
-};
-
-img_name_t img_array_gpt[PART_MAX] = { 
-#ifdef MTK_ROOT_PRELOADER_CHECK
-    {"/dev/preloader", "preloader"},
-#endif
-    {"/dev/block/platform/mtk-msdc.0/by-name/lk", "uboot"},
-    {"/dev/block/platform/mtk-msdc.0/by-name/boot", "bootimg"},
-    {"/dev/block/platform/mtk-msdc.0/by-name/recovery", "recoveryimg"},
-    {"/dev/block/platform/mtk-msdc.0/by-name/LOGO", "logo"},
-};
-
 img_checksum_t computed_checksum[PART_MAX];
 img_checksum_t expected_checksum[PART_MAX];
 
 int check_map[MAX_FILES_IN_SYSTEM/INT_BY_BIT+1];
 int check_modify[MAX_FILES_IN_SYSTEM/INT_BY_BIT+1];
 
-static bool is_support_gpt_c(void) {
-    //int fd = open("/dev/block/platform/mtk-msdc.0/by-name/para", O_RDONLY);
-    int fd = open("/dev/block/platform/mtk-msdc.0/by-name/MISC", O_RDONLY);
-    if (fd == -1) {
-        return false;
-    } else {
-        close(fd);
-        return true;
-    }
-}
 static void set_bit(int x)
 {
     check_map[x>>SHIFT]|= 1<<(x&MASK);
@@ -386,7 +350,7 @@ static int check_reall_file(char* path, int nCS, char* nMd5)
                                     LOGE("Error:%s is not exist\n",path);
                                 }
                                 time_t modify=statbuf.st_mtime;
-                                ui->Print("on %s\n", ctime(&modify));
+                                printf("on %s\n", ctime(&modify));
                                 //fclose(fp_info);
                                 //return CHECK_FILE_NOT_MATCH;
                                 rettmp = CHECK_FILE_NOT_MATCH;
@@ -477,7 +441,7 @@ static bool dir_check( char const*dir)
             for(; idx < sizeof(file_to_check)/sizeof(char*); idx++){
                 if(strcmp(dp->d_name, file_to_check[idx]) == 0){
                     root_to_check[idx]=1;
-                    ui->Print("Dir_check---found a root File:  %s\n",dp->d_name);
+                    printf("Dir_check---found a root File:  %s\n",dp->d_name);
                 }
             }
             for(; idy < sizeof(file_to_pass)/sizeof(char*); idy++){
@@ -488,7 +452,7 @@ static bool dir_check( char const*dir)
                 }
             }
             if(find_pass==0){
-                ui->Print("scanning **** %s ****\n",dp->d_name);
+                printf("scanning **** %s ****\n",dp->d_name);
                 if(0 == file_crc_check(newdir, &nCS, nMd5)){
                     if (check_reall_file(newdir, nCS, (char*)nMd5)!=0){
                         LOGE("Error:%s check fail\n",newdir);
@@ -531,7 +495,7 @@ static int load_zip_file()
     MemMapping map;
     if (sysMapFile(ZIP_FILE_ROOT, &map) != 0) {
         LOGE("failed to map file %s\n", ZIP_FILE_ROOT);
-        return INSTALL_CORRUPT;
+        return CHECK_MOUNT_ERR;
     }
 
     //ret=stat(ZIP_FILE_ROOT_TEMP,&statbuf);
@@ -710,13 +674,13 @@ static int load_image_encrypt_file()
         }
     else
         {
-            ui->Print("fopen error,error reason is %s\n",strerror(errno));
+            printf("fopen error,error reason is %s\n",strerror(errno));
             return -1;
         }
         }
     else
         {
-            ui->Print("fopen error,error reason is %s\n",strerror(errno));
+            printf("fopen error,error reason is %s\n",strerror(errno));
             return CHECK_NO_KEY;
 
         }
@@ -760,12 +724,12 @@ static int load_system_encrypt_file()
             }
         }
         else {
-            ui->Print("fopen error,error reason is %s\n",strerror(errno));
+            printf("fopen error,error reason is %s\n",strerror(errno));
             return -1;
         }
     }
     else{
-        ui->Print("fopen error,error reason is %s\n",strerror(errno));
+        printf("fopen error,error reason is %s\n",strerror(errno));
         return CHECK_NO_KEY;
     }
     fclose(fp_info);
@@ -773,77 +737,6 @@ static int load_system_encrypt_file()
     return 0;    
 }
 
-static bool image_crc_check( char const*dir)
-{
-    struct dirent *dp;
-    DIR *d_fd;
-    unsigned int nCS = 0;
-    unsigned char nMd5[MD5_LENGTH];
-    if ((d_fd = opendir(dir)) == NULL) {
-        LOGE("dir_check-<<<< %s not dir\n",dir);
-        return false;
-    }
-    while ((dp = readdir(d_fd)) != NULL) {
-        if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0 || strcmp(dp->d_name,"lost+found")==0)
-          continue;
-
-        if (dp->d_type == DT_DIR){
-           char newdir[FILENAME_MAX]={0};
-           memset(newdir, 0, FILENAME_MAX);
-           strcpy(newdir, dir);
-           strcat(newdir, dp->d_name);
-           strcat(newdir, "/");
-           if(dir_check(newdir) == false){
-               closedir(d_fd);
-               return false;
-           }
-         }else{     
-           char newdir[FILENAME_MAX];
-           int idx = 0;
-           int idy = 0;
-           memset(newdir, 0, FILENAME_MAX);
-           strcpy(newdir, dir);
-           strcat(newdir, dp->d_name);
-               if(0 == file_crc_check(newdir, &nCS, nMd5)){
-                   #ifdef MTK_ROOT_PRELOADER_CHECK
-                       if(strstr(newdir,"preloader")!=NULL)
-                         {
-                             computed_checksum[PRELOADER].crc32=nCS;
-                        memcpy(computed_checksum[PRELOADER].md5, nMd5, MD5_LENGTH);
-                         }
-                #endif
-                     if(strstr(newdir,"bootimg")!=NULL)
-                         {
-                             computed_checksum[BOOTIMG].crc32=nCS;
-                        memcpy(computed_checksum[BOOTIMG].md5, nMd5, MD5_LENGTH);
-                         }
-                  if(strstr(newdir,"uboot")!=NULL)
-                      {
-                          computed_checksum[UBOOT].crc32=nCS;
-                        memcpy(computed_checksum[UBOOT].md5, nMd5, MD5_LENGTH);
-                      }
-                  if(strstr(newdir,"recovery")!=NULL)
-                      {
-                          computed_checksum[RECOVERYIMG].crc32=nCS;
-                        memcpy(computed_checksum[RECOVERYIMG].md5, nMd5, MD5_LENGTH);
-                      }
-                  if(strstr(newdir,"logo")!=NULL)
-                      {
-                          computed_checksum[LOGO].crc32=nCS;
-                        memcpy(computed_checksum[LOGO].md5, nMd5, MD5_LENGTH);
-                      }
-                      
-               }else{
-                     printf("%s function fail\n",__func__);
-                  closedir(d_fd);
-                  return false;
-               }
-               
-        }
-    }
-     closedir(d_fd);
-     return true;
-}
 static int list_root_file()
 {
     int idx=0;
@@ -852,7 +745,7 @@ static int list_root_file()
             if(root_to_check[idx]==1)
                 {
                     check_file_result->n_rootfile+=1;
-                    ui->Print("found a root file,%s\n",file_to_check[idx]);
+                    printf("found a root file,%s\n",file_to_check[idx]);
                 }
         }
     return 0;
@@ -891,13 +784,13 @@ static int list_lost_file(int number)
                                 if(p_cmp_name != NULL)
                                 {
                                     check_file_result->n_lostfile+=1;
-                                    ui->Print("Error:%s is lost\n",p_cmp_name);
+                                    printf("Error:%s is lost\n",p_cmp_name);
                                     checkResult=false;
                                 }
                                 else
                                 {
                                     check_file_result->n_lostfile+=1;
-                                    ui->Print("Error:%s is lost\n",p_name);
+                                    printf("Error:%s is lost\n",p_name);
                                     checkResult=false;
                                 }
                                 found=1;
@@ -916,109 +809,12 @@ static int list_lost_file(int number)
         }
     else
         {
-            ui->Print("fopen error,error reason is %s\n",strerror(errno));
+            printf("fopen error,error reason is %s\n",strerror(errno));
             return -1;
         }
     fclose(fp_info);
     return 0;
 
-}
-
-static int image_copy( const char* path,int loop,const char* tem_name)
-{
-    unsigned int nCS=0;
-    char *temp_file;
-    char buf[1024];
-    int rRead_count = 0;
-    int idx = 0;
-    int sum=0;
-    if (path == NULL ){
-        LOGE("image_copy-> %s is null", path);
-        return -1;
-    }
-
-    if (ensure_path_mounted(IMAGE_LOAD_PATH) != 0) {
-      LOGE("Can't mount %s\n", IMAGE_LOAD_PATH);
-      return -1;
-    }
-    
-    if (mkdir(IMAGE_LOAD_PATH, 0700) != 0) {
-      if (errno != EEXIST) {
-        LOGE("Can't mkdir %s (%s)\n", IMAGE_LOAD_PATH, strerror(errno));
-        return -1;
-      }
-    }
-    struct stat st;
-    if (stat(IMAGE_LOAD_PATH, &st) != 0) {
-      LOGE("failed to stat %s (%s)\n", IMAGE_LOAD_PATH, strerror(errno));
-      return -1;
-    }
-    if (!S_ISDIR(st.st_mode)) {
-      LOGE("%s isn't a directory\n", IMAGE_LOAD_PATH);
-      return -1;
-    }
-    if ((st.st_mode & 0777) != 0700) {
-      LOGE("%s has perms %o\n", IMAGE_LOAD_PATH, st.st_mode);
-      return -1;
-    }
-    if (st.st_uid != 0) {
-      LOGE("%s owned by %lu; not root\n", IMAGE_LOAD_PATH, st.st_uid);
-      return -1;
-    }
-    char copy_path[FILENAME_MAX];
-    memset(copy_path, 0, FILENAME_MAX);
-    strcpy(copy_path, IMAGE_LOAD_PATH);
-    strcat(copy_path, "/temp_");
-    strcat(copy_path, tem_name);
-    char* buffer = (char*)malloc(1024);
-    if (buffer == NULL) {
-      LOGE("Failed to allocate buffer\n");
-      return -1;
-    }
-    
-    size_t read;
-    FILE* fin = fopen(path, "rb");
-    if (fin == NULL) {
-      LOGE("Failed to open %s (%s)\n", path, strerror(errno));
-      return -1;
-    }
-    FILE* fout = fopen(copy_path, "wb");
-    if (fout == NULL) {
-      LOGE("Failed to open %s (%s)\n", copy_path, strerror(errno));
-      return -1;
-    }
-    
-    while ((read = fread(buffer, 1, 1024, fin)) > 0) {
-      sum+=read;
-      if(sum<loop)
-      {
-          if (fwrite(buffer, 1, read, fout) != read) {
-            LOGE("Short write of %s (%s)\n", copy_path, strerror(errno));
-            return -1;
-          }
-      }
-      else
-      {
-      int read_end=read+loop-sum;
-      if (fwrite(buffer, 1, read_end, fout) != read_end) {
-         LOGE("Short write of %s (%s)\n", copy_path, strerror(errno));
-         return -1;
-      }
-      break;
-      }
-    }
-    
-    free(buffer);
-    if (fclose(fout) != 0) {
-      LOGE("Failed to close %s (%s)\n", copy_path, strerror(errno));
-      return -1;
-    }
-    
-    if (fclose(fin) != 0) {
-      LOGE("Failed to close %s (%s)\n", path, strerror(errno));
-      return -1;
-    }
-    return 0;
 }
 
 static int list_new_file()
@@ -1036,16 +832,10 @@ static int list_new_file()
     if(fp_new)
     {
         while (fgets(buf, sizeof(buf), fp_new)) {
-        ui->Print("Error:%s is new ",buf);
+        printf("Error:%s is new ",buf);
         int ret=stat(buf,&statbuf);
-/*
-        if(ret != 0)
-        {
-            LOGE("Error:%s is not exist\n",buf);
-        }
-*/
         time_t modify=statbuf.st_mtime;
-        ui->Print("it is created on %s\n", ctime(&modify));
+        printf("it is created on %s\n", ctime(&modify));
         }
     }
     else
@@ -1110,67 +900,6 @@ static bool remove_check_dir(const char *dir_name)
 return true;
 }
 
-static int get_image_info()
-{
-    FILE *fp_info;
-    char buf[512];
-    char p_name[32];
-    unsigned int p_size;
-    unsigned int p_c;
-    unsigned char p_crc[MD5_LENGTH*2];
-    memset(expected_checksum, 0, sizeof(expected_checksum));
-    
-    fp_info = fopen(TEMP_IMAGE_IN_RAM, "r");
-    if(fp_info)
-        {
-                while (fgets(buf, sizeof(buf), fp_info)) {
-                    memset(p_crc, 0, sizeof(p_crc));
-                    //Z_DEBUG("%d %s\n", __LINE__, buf);
-                    if (sscanf(buf, "%s %d %u %s", p_name, &p_size, &p_c, p_crc) == 4) {
-                        //Z_DEBUG("%d %s\n", __LINE__, p_crc);
-                        hextoi_md5(p_crc);
-#ifdef MTK_ROOT_PRELOADER_CHECK
-                        if (!strcmp(p_name, "preloader.bin")) {
-                            expected_checksum[PRELOADER].size = p_size;
-                            expected_checksum[PRELOADER].crc32 = p_c;
-                            memcpy(expected_checksum[PRELOADER].md5, p_crc, MD5_LENGTH);
-                            }
-#endif
-                        if (!strcmp(p_name, "lk.bin")) {
-                            expected_checksum[UBOOT].size = p_size;
-                            expected_checksum[UBOOT].crc32 = p_c;
-                            memcpy(expected_checksum[UBOOT].md5, p_crc, MD5_LENGTH);
-                            }
-                        if (!strcmp(p_name, "boot.img")) {
-                            expected_checksum[BOOTIMG].size = p_size;
-                            expected_checksum[BOOTIMG].crc32 = p_c;
-                            memcpy(expected_checksum[BOOTIMG].md5, p_crc, MD5_LENGTH);
-                            }
-                        if (!strcmp(p_name, "recovery.img")) {
-                            expected_checksum[RECOVERYIMG].size = p_size;
-                            expected_checksum[RECOVERYIMG].crc32 = p_c;
-                            memcpy(expected_checksum[RECOVERYIMG].md5, p_crc, MD5_LENGTH);
-                            }
-                        if (!strcmp(p_name, "logo.bin")) {
-                            expected_checksum[LOGO].size = p_size;
-                            expected_checksum[LOGO].crc32 = p_c;
-                            memcpy(expected_checksum[LOGO].md5, p_crc, MD5_LENGTH);
-                            }
-
-                        }
-                    }
-                
-        }
-    else
-        {
-            printf("%s function fail,open error reason is %s\n",__func__,strerror(errno));
-            return -1;
-        }
-    fclose(fp_info);
-    return 0;
-}
-
-
 static int check_file_number_insystem(int file_number)
 {
     FILE *fp_info;
@@ -1187,21 +916,6 @@ static int check_file_number_insystem(int file_number)
                         if (!strcmp(p_name, "file_number_in_system_dayu")) {
                             check_file_result->expect_file_number=p_number;
                             //printf("func is %s,line is %d,p_number is %d,file_number is %d,n_modfyfile is %d,check_file_result->n_newfile is %d\n",__func__,__LINE__,p_number,file_number,check_file_result->n_modifyfile,check_file_result->n_newfile);
-                            #if 0
-                            if((p_number==file_number)&&(check_file_result->n_lostfile==0)&&(check_file_result->n_newfile==0))
-                                {
-                                    ui->Print("\nSystem Dir File Number Check Pass");
-                                    fclose(fp_info);
-                                    return 0;
-                                }
-                            else
-                                {
-                                    printf("%s %d p_number:%d file_number:%d check_file_result->n_lostfile:%d check_file_result->n_newfile:%d\n", __func__, __LINE__, p_number, file_number, check_file_result->n_lostfile, check_file_result->n_newfile);
-                                    ui->Print("\nSystem Dir File Number Check Fail\n");
-                                    fclose(fp_info);
-                                    return CHECK_SYSTEM_FILE_NUM_ERR;
-                                }
-                            #endif
                             }
                         }
                     
@@ -1209,7 +923,7 @@ static int check_file_number_insystem(int file_number)
         }
     else
         {
-            ui->Print("fopen error,error reason is %s\n",strerror(errno));
+            printf("fopen error,error reason is %s\n",strerror(errno));
             return 1;
         }
     fclose(fp_info);
@@ -1241,12 +955,6 @@ static void delete_unneed_file()
     {
         LOGE("unlink temp new file error\n");
     }
-
-    if(!remove_check_dir(IMAGE_LOAD_PATH))
-    {
-        LOGE("unlink temp image dir error\n");
-    }
-
 }
 static int list_modify_file(int number)
 {
@@ -1273,18 +981,18 @@ static int list_modify_file(int number)
                         p_cmp_name=strstr(p_name,"/system");
                         if(p_cmp_name != NULL)
                         {
-                            ui->Print("Error:%s has been modified",p_cmp_name);
+                            printf("Error:%s has been modified",p_cmp_name);
                             int ret=stat(p_cmp_name,&statbuf);
                             if(ret != 0)
                             {
                                 LOGE("Error:%s is not exist\n",p_cmp_name);
                             }
                             time_t modify=statbuf.st_mtime;
-                            ui->Print("on %s\n", ctime(&modify));
+                            printf("on %s\n", ctime(&modify));
                          }
                          else
                          {
-                             ui->Print("Error:%s is modifyed\n",p_name);
+                             printf("Error:%s is modifyed\n",p_name);
                          }
                          found=1;
                          break;
@@ -1304,7 +1012,7 @@ static int list_modify_file(int number)
       }
     else
     {
-        ui->Print("fopen error,error reason is %s\n",strerror(errno));
+        printf("fopen error,error reason is %s\n",strerror(errno));
         return -1;
     }
     fclose(fp_info);
@@ -1327,12 +1035,12 @@ static int encrypt_file_doub_check()
                 check_file_result->crc_count_check=crc_count_crc;
             }
             else {
-                ui->Print("double check file is error\n");
+                printf("double check file is error\n");
                 return CHECK_NO_KEY; 
             }     
         }
         else {
-            ui->Print("double check file is null\n");
+            printf("double check file is null\n");
             return CHECK_NO_KEY; 
         }
     }
@@ -1343,246 +1051,109 @@ static int encrypt_file_doub_check()
     
     if(0 == file_crc_check(FILE_COUNT_TMP, &nCS, nMd5)){
         if(nCS!=check_file_result->file_count_check){
-            ui->Print("file count double check fail\n");
+            printf("file count double check fail\n");
             return CHECK_NO_KEY; 
         }
     }
 
     if(0 == file_crc_check(CRC_COUNT_TMP, &nCS, nMd5)){
         if(nCS != check_file_result->crc_count_check){
-            ui->Print("crc count double check fail\n");
+            printf("crc count double check fail\n");
             return CHECK_NO_KEY; 
         }
     }
 return 0;
 }
 
-int root_check(){
-    ui->SetBackground(RecoveryUI::ERASING);
-    ui->SetProgressType(RecoveryUI::INDETERMINATE);
-    ui->Print("Now check begins, please wait.....\n");
+int check(){
+    printf("Now check begins, please wait.....\n");
     int per,cper;
     
-#ifdef MTK_ROOT_NORMAL_CHECK
-    printf("use normal check\n");
-#endif
-    
-#ifdef MTK_ROOT_ADVANCE_CHECK
-    printf("use advance check\n");
-#endif
-
     check_file_result=(struct last_check_file*)malloc(sizeof(last_check_file));
 
-    if(ensure_path_mounted(SYSTEM_ROOT) != 0)
-    {
-        ui->Print("--mount System fail \n");
-    }
-    
     memset(check_file_result,0,sizeof(last_check_file));
     memset(check_map,0xff,sizeof(check_map));
     memset(check_modify,0xff,sizeof(check_modify));
 
-    // 从压缩文件"recovery_rootcheck"recovery_rootcheck" 解压出 crc_count/doub_check/file_count
-    if(load_zip_file())
-    {
-        ui->Print("load source zip file fail\n");
+	//准备,加载解密校验文件
+    if(load_zip_file()){
+        printf("load source zip file fail\n");
         return CHECK_NO_KEY;
     }
-
-    // 从上一步解压出的 file_count 中读出数据并解密保存到 -> TEMP_FILE_IN_RAM="/tmp/system_dencrypt" 
-    if(load_system_encrypt_file())
-    {
-        ui->Print("load system encrypt file fail\n");
+    if(load_system_encrypt_file()){
+        printf("load system encrypt file fail\n");
         return CHECK_NO_KEY;
     }
-    
-    // 从上一步解压出的 crc_count 中读出数据并解密保存到 -> TEMP_IMAGE_IN_RAM="/tmp/image_dencrypt" 
-    if(load_image_encrypt_file())
-    {
-        ui->Print("load  partition encrypt file fail\n");
+    if(load_image_encrypt_file()){
+        printf("load  partition encrypt file fail\n");
         return CHECK_NO_KEY;
     }
-    
-    // 先校验上述两个文件"crc_count""file_count"的CRC32值, 与 "doub_check" 中保存的值比较, 如果不同则校验失败.
-    if(encrypt_file_doub_check())
-    {
-        ui->Print("encrypt file double check fail\n");
+    if(encrypt_file_doub_check()){
+        printf("encrypt file double check fail\n");
         return CHECK_NO_KEY;
     }
-   
-    if(false == dir_check(SYSTEM_ROOT))
-    {
+  
+    //校验SYSTEM......
+    printf("\n\n========== ========== START SYSTEM MD5 CHECK ========== ==========\n");
+    if(false == dir_check(SYSTEM_ROOT)){
         checkResult = false;
     }
 
     check_file_result->file_number_to_check+=1;
-    ui->Print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-   
-    if (check_file_number_insystem(check_file_result->file_number_to_check)!=0)
-    {
+  
+    //显示检查结果 
+    printf("\n\n========== ========== SHOW THE RESULT ====== ========== ==========\n");
+    if (check_file_number_insystem(check_file_result->file_number_to_check)!=0){
         checkResult=false;
     }
-    if(list_new_file())
-    {
+    //new
+    if(list_new_file()){
         LOGE("list new file error\n");
     }
-    if(list_root_file())
-    {
+    //root
+    if(list_root_file()){
         LOGE("list root file error\n");
     }
-   
-    for(cper=0;cper<check_file_result->file_number_to_check-1;cper++)
-    {
-        if(test_bit(cper))
-        {
+    //lost
+    for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){
+        if(test_bit(cper)){
             //checkResult=false;
             list_lost_file(cper);
         }
     }
-   
-    for(cper=0;cper<check_file_result->file_number_to_check-1;cper++)
-    {
-           
-        if(!test_bit_m(cper))
-            {
-                checkResult=false;
-                list_modify_file(cper);    
-            }
-    }
-    
-    if(check_file_result->n_newfile)
-    {
-        ui->Print("Error:found %d new files\n",check_file_result->n_newfile);
-    }
-    if(check_file_result->n_lostfile)
-    {
-        ui->Print("Error:found %d lost files\n",check_file_result->n_lostfile);
-    }
-    if(check_file_result->n_modifyfile)
-    {
-        ui->Print("Error:found %d modified files\n",check_file_result->n_modifyfile);
-
-    }
-    if(check_file_result->n_rootfile)
-    {
-        ui->Print("Error:found %d root files\n",check_file_result->n_rootfile);
-
-    }
-    if(ensure_path_unmounted(SYSTEM_ROOT) != 0)
-    {
-        LOGE("root_check function--unmount System fail \n");
-    }
-
-    if(get_image_info())
-    {
-        checkResult=false;
-    }
-    
-    int i = 0;
-
-    if(!is_support_gpt_c())
-    {
-        printf("this is not gpt version");
-        for(i=0;i<PART_MAX;i++)
-        {
-            if(0 == image_copy(img_array[i].img_devname,expected_checksum[i].size,img_array[i].img_printname))
-            {
-                printf("copy %s done\n", img_array[i].img_printname);
-            }
-            else
-            {
-                printf("copy %s error\n", img_array[i].img_printname);
-                checkResult = false;
-            }
+    //modify
+    for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){           
+        if(!test_bit_m(cper)){
+            checkResult=false;
+            list_modify_file(cper);    
         }
     }
-    else
-    {
-        printf("this is gpt version");
-        for(i=0;i<PART_MAX;i++)
-        {
-            if(0 == image_copy(img_array_gpt[i].img_devname,expected_checksum[i].size,img_array_gpt[i].img_printname))
-            {
-                printf("copy %s done\n", img_array_gpt[i].img_printname);
-            }
-            else
-            {
-                printf("copy %s error\n", img_array_gpt[i].img_printname);
-                checkResult = false;
-            }
-        }
+    if(check_file_result->n_newfile){
+        printf("Error:found %d new files\n",check_file_result->n_newfile);
+    }
+    if(check_file_result->n_lostfile){
+        printf("Error:found %d lost files\n",check_file_result->n_lostfile);
+    }
+    if(check_file_result->n_modifyfile){
+        printf("Error:found %d modified files\n",check_file_result->n_modifyfile);
+    }
+    if(check_file_result->n_rootfile){
+        printf("Error:found %d root files\n",check_file_result->n_rootfile);
     }
 
-    if(false == image_crc_check(IMAGE_LOAD_PATH))
-    {
-        checkResult = false;
-        return CHECK_IMAGE_ERR;
-    }
-    
-    for(i=0;i<PART_MAX;i++)
-    {
-        
-#ifdef MTK_ROOT_NORMAL_CHECK
-        if((expected_checksum[i].crc32==computed_checksum[i].crc32)&&(computed_checksum[i].crc32 != 0))
-        {
-            printf("\n%s NORMAL check Pass", img_array[i].img_printname);
-        }
-        else
-        {
-            if(i==1)
-            {  
-                checkResult=false;
-                ui->Print("Error:%s NORMAL check Fail\n",img_array[i].img_printname);
-                printf("except check sum is %u,compute checksum is %u\n",expected_checksum[i].crc32,computed_checksum[i].crc32);
-            }
-        }
-#endif
-
-#ifdef MTK_ROOT_ADVANCE_CHECK
-        if(memcmp(expected_checksum[i].md5, computed_checksum[i].md5, MD5_LENGTH)==0)
-        {
-            printf("\n%s ADVANCE check Pass", img_array[i].img_printname);
-        }
-        else
-        {
-            if(i==1)
-            {
-                checkResult=false;
-                ui->Print("Error:%s ADVANCE check Fail\n", img_array[i].img_printname);
-#if 1
-                char *nMd5 = (char*)expected_checksum[i].md5;
-                char *p_md = (char*)computed_checksum[i].md5;
-                int i;
-                printf("e:");
-                for(i=0;i<16;i++)
-                {
-                    printf("%02x",nMd5[i]);
-                }
-                printf("\n");
-                printf("c:");
-                for(i=0;i<16;i++)
-                {
-                    printf("%02x", p_md[i]);
-                }
-                printf("\n");
-#endif
-            }
-        }
-#endif
-    }
+    //退出前清空一些数据,释放内存
     int m_root_check=0;
-    for(;m_root_check<MAX_ROOT_TO_CHECK;m_root_check++)
-    {
+    for(;m_root_check<MAX_ROOT_TO_CHECK;m_root_check++){
         root_to_check[m_root_check]=0;
     }
     delete_unneed_file();
     free(check_file_result);
-    if(checkResult)
-    {
+
+    //返回
+    if(checkResult){
         return CHECK_PASS;
     }
-    else
-    {
+    else{
         checkResult=true;
         return CHECK_FAIL;
     }
