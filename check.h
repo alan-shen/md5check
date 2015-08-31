@@ -60,6 +60,7 @@ static void hextoi_md5(unsigned char p_crc[MD5_LENGTH*2]){
 }
 
 int check();
+int list();
 
 #endif
 

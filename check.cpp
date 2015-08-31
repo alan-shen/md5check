@@ -1066,12 +1066,7 @@ static int encrypt_file_doub_check()
 return 0;
 }
 
-int check(){
-    printf("Now check begins, please wait.....\n");
-    int per,cper;
-    
-    check_file_result=(struct last_check_file*)malloc(sizeof(last_check_file));
-
+int load_all(){
     memset(check_file_result,0,sizeof(last_check_file));
     memset(check_map,0xff,sizeof(check_map));
     memset(check_modify,0xff,sizeof(check_modify));
@@ -1093,7 +1088,60 @@ int check(){
         printf("encrypt file double check fail\n");
         return CHECK_NO_KEY;
     }
-  
+
+    return CHECK_PASS;
+}
+
+int list(){
+    int ret=0;
+    FILE *fp_info;
+    char buf[512];
+    char p_name[256];
+    unsigned char p_md[MD5_LENGTH*2];
+    char *p_cmp_name;
+    unsigned int p_size;
+    int p_number;
+    check_file_result=(struct last_check_file*)malloc(sizeof(last_check_file));
+   
+    ret = load_all();
+    if(ret != CHECK_PASS){
+        printf("Load check file fail!\n");
+        return CHECK_NO_KEY;
+    }
+
+    fp_info = fopen(TEMP_FILE_IN_RAM, "r");
+    if(fp_info){
+        if(fgets(buf, sizeof(buf), fp_info) != NULL){
+            while(fgets(buf, sizeof(buf), fp_info)){
+			#if 0
+                if (sscanf(buf, "%d    %s    %u    %s", &p_number,p_name,&p_size,p_md) == 4){
+					printf("%s\n", p_md);
+				}
+			#else
+				printf("%s", buf);
+			#endif
+			}
+		}
+    }
+	else{
+		printf("Open fail\n");
+	}
+
+    return 0;
+}
+
+int check(){
+    printf("Now check begins, please wait.....\n");
+    int per,cper;
+    int ret = 0;
+    check_file_result=(struct last_check_file*)malloc(sizeof(last_check_file));
+ 
+    ret = load_all();
+    if(ret != CHECK_PASS){
+        printf("Load check file fail!\n");
+        return CHECK_NO_KEY;
+    }
+ 
     //校验SYSTEM......
     printf("\n\n========== ========== START SYSTEM MD5 CHECK ========== ==========\n");
     if(false == dir_check(SYSTEM_ROOT)){
