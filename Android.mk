@@ -3,15 +3,15 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES += \
 	cr32.c \
-    md5.c \
-    check.cpp \
-    main_check.cpp
+	md5.c \
+	check.cpp \
+	main_check.cpp
 
 LOCAL_STATIC_LIBRARIES := \
-    libminzip \
-    libz \
-    libstdc++ \
-    libc
+	libminzip \
+	libz \
+	libstdc++ \
+	libc
 
 LOCAL_C_INCLUDES += bootable/recovery
 LOCAL_C_INCLUDES += external/openssl/include
@@ -28,15 +28,15 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES += \
 	cr32.c \
-    md5.c \
-    check.cpp \
-    main_list.cpp
+	md5.c \
+	check.cpp \
+	main_list.cpp
 
 LOCAL_STATIC_LIBRARIES := \
-    libminzip \
-    libz \
-    libstdc++ \
-    libc
+	libminzip \
+	libz \
+	libstdc++ \
+	libc
 
 LOCAL_C_INCLUDES += bootable/recovery
 LOCAL_C_INCLUDES += external/openssl/include

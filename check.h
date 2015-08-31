@@ -6,7 +6,7 @@
 #define MTK_ROOT_ADVANCE_CHECK 	1
 enum
 {
-    CHECK_PASS,
+	CHECK_PASS,
 	CHECK_FAIL,
 	CHECK_NO_KEY,
 	CHECK_OPEN_FILE_ERR,
@@ -39,16 +39,6 @@ typedef struct{
 	char img_printname[DEVNAME_LENGTH];
 }img_name_t;
 
-enum{
-#ifdef MTK_ROOT_PRELOADER_CHECK
-	PRELOADER,
-#endif
-	UBOOT,
-	BOOTIMG,
-	RECOVERYIMG,
-	LOGO,
-	PART_MAX,
-};
 
 #define hextoi(c) (((c)-'a'+1)>0?((c)-'a'+10):((c)-'0'))
 static void hextoi_md5(unsigned char p_crc[MD5_LENGTH*2]){
@@ -59,8 +49,8 @@ static void hextoi_md5(unsigned char p_crc[MD5_LENGTH*2]){
 	}
 }
 
-int check();
-int list();
+int main_check();
+int main_list();
 
 #endif
 
