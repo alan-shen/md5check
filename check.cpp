@@ -737,6 +737,39 @@ static int load_system_encrypt_file()
     return 0;    
 }
 
+static int check_file_number_insystem(int file_number)
+{
+    FILE *fp_info;
+    char buf[512];
+    char p_name[128];
+    int p_number;
+    int p_pnumber;
+    fp_info = fopen(TEMP_FILE_IN_RAM, "r");
+    printf(">> check file num in system <<\n");
+    if(fp_info)
+        {
+            if (fgets(buf, sizeof(buf), fp_info) != NULL) {
+                    if (sscanf(buf, "%d    %s %d", &p_pnumber,p_name, &p_number)== 3) {
+                        if (!strcmp(p_name, "file_number_in_system_dayu")) {
+                            check_file_result->expect_file_number=p_number;
+                            printf("\tp_number is : %d\n\tfile_number is : %d\n\tmodfy num is : %d,\n\tnewfile num is : %d\n\n",
+									p_number,file_number,
+									check_file_result->n_modifyfile,
+									check_file_result->n_newfile);
+                            }
+                        }
+                    
+                }
+        }
+    else
+        {
+            printf("fopen error,error reason is %s\n",strerror(errno));
+            return 1;
+        }
+    fclose(fp_info);
+    return 0;
+}
+
 static int list_root_file()
 {
     int idx=0;
@@ -775,7 +808,7 @@ static int list_lost_file(int number)
                                 {
                                     if(strstr(p_cmp_name, file_to_pass[idy]) != NULL)
                                     {
-                                        printf("list lost file---found a file to pass:  %s\n",p_cmp_name);
+                                        printf("\tname : %-50s --found a file to pass\n",p_cmp_name);
                                         //checkResult=true;
                                         //break;
                                         return 0;
@@ -784,13 +817,13 @@ static int list_lost_file(int number)
                                 if(p_cmp_name != NULL)
                                 {
                                     check_file_result->n_lostfile+=1;
-                                    printf("Error:%s is lost\n",p_cmp_name);
+                                    printf("\tname : %-50s is lost\n",p_cmp_name);
                                     checkResult=false;
                                 }
                                 else
                                 {
                                     check_file_result->n_lostfile+=1;
-                                    printf("Error:%s is lost\n",p_name);
+                                    printf("\tname : %-50s is lost\n",p_name);
                                     checkResult=false;
                                 }
                                 found=1;
@@ -829,13 +862,14 @@ static int list_new_file()
         return 0;
     }
     fp_new= fopen(FILE_NEW_TMP, "r");
+    printf("\n>> New File List <<\n");
     if(fp_new)
     {
         while (fgets(buf, sizeof(buf), fp_new)) {
-        printf("Error:%s is new ",buf);
-        int ret=stat(buf,&statbuf);
-        time_t modify=statbuf.st_mtime;
-        printf("it is created on %s\n", ctime(&modify));
+            char *token = strtok(buf, "\n");
+            int ret=stat(buf,&statbuf);
+            time_t modify=statbuf.st_mtime;
+            printf("\tname : %-50s --Created on  : %s", token, ctime(&modify));
         }
     }
     else
@@ -846,6 +880,68 @@ static int list_new_file()
 
     fclose(fp_new);
     return 0;
+}
+
+static int list_modify_file(int number)
+{
+    FILE *fp_info;
+    struct stat statbuf;
+    char buf[512];
+    char p_name[256];
+    char p_md[256];
+    int found=0;
+    char *p_cmp_name=NULL;
+    unsigned int p_size;
+    int p_number;
+    fp_info = fopen(TEMP_FILE_IN_RAM, "r");
+    if(fp_info)
+    {
+        if (fgets(buf, sizeof(buf), fp_info) != NULL) 
+        {
+            while (fgets(buf, sizeof(buf), fp_info)) 
+            {
+                if (sscanf(buf,"%d    %s    %u    %s", &p_number,p_name,&p_size,p_md) == 4) 
+                {
+                    if(p_number==number)
+                    {
+                        p_cmp_name=strstr(p_name,"/system");
+                        if(p_cmp_name != NULL)
+                        {
+                            int ret=stat(p_cmp_name,&statbuf);
+                            if(ret != 0)
+                            {
+                                LOGE("Error:%s is not exist\n",p_cmp_name);
+                            }
+                            time_t modify=statbuf.st_mtime;
+                            printf("\tname : %-50s --Modified on : %s",p_cmp_name, ctime(&modify));
+                         }
+                         else
+                         {
+                             printf("Error:%s is modifyed\n",p_name);
+                         }
+                         found=1;
+                         break;
+                                
+                      }
+        
+                  }
+              }
+              if(!found)
+              {
+                  LOGE("Error:not found a lost file\n");
+                  fclose(fp_info);
+                  return -1;
+              }
+                
+          }
+      }
+    else
+    {
+        printf("fopen error,error reason is %s\n",strerror(errno));
+        return -1;
+    }
+    fclose(fp_info);
+    return 0;    
 }
 
 static bool remove_check_file(const char *file_name)
@@ -900,35 +996,6 @@ static bool remove_check_dir(const char *dir_name)
 return true;
 }
 
-static int check_file_number_insystem(int file_number)
-{
-    FILE *fp_info;
-    char buf[512];
-    char p_name[128];
-    int p_number;
-    int p_pnumber;
-    fp_info = fopen(TEMP_FILE_IN_RAM, "r");
-    if(fp_info)
-        {
-            if (fgets(buf, sizeof(buf), fp_info) != NULL) {
-                    if (sscanf(buf, "%d    %s %d", &p_pnumber,p_name, &p_number)== 3) {
-                        printf("p_name:%s,p_number : %d\n",p_name,p_number);
-                        if (!strcmp(p_name, "file_number_in_system_dayu")) {
-                            check_file_result->expect_file_number=p_number;
-                            //printf("func is %s,line is %d,p_number is %d,file_number is %d,n_modfyfile is %d,check_file_result->n_newfile is %d\n",__func__,__LINE__,p_number,file_number,check_file_result->n_modifyfile,check_file_result->n_newfile);
-                            }
-                        }
-                    
-                }
-        }
-    else
-        {
-            printf("fopen error,error reason is %s\n",strerror(errno));
-            return 1;
-        }
-    fclose(fp_info);
-    return 0;
-}
 static void delete_unneed_file()
 {
     if(!remove_check_file(TEMP_FILE_IN_RAM))
@@ -955,68 +1022,6 @@ static void delete_unneed_file()
     {
         LOGE("unlink temp new file error\n");
     }
-}
-static int list_modify_file(int number)
-{
-    FILE *fp_info;
-    struct stat statbuf;
-    char buf[512];
-    char p_name[256];
-    char p_md[256];
-    int found=0;
-    char *p_cmp_name=NULL;
-    unsigned int p_size;
-    int p_number;
-    fp_info = fopen(TEMP_FILE_IN_RAM, "r");
-    if(fp_info)
-    {
-        if (fgets(buf, sizeof(buf), fp_info) != NULL) 
-        {
-            while (fgets(buf, sizeof(buf), fp_info)) 
-            {
-                if (sscanf(buf,"%d    %s    %u    %s", &p_number,p_name,&p_size,p_md) == 4) 
-                {
-                    if(p_number==number)
-                    {
-                        p_cmp_name=strstr(p_name,"/system");
-                        if(p_cmp_name != NULL)
-                        {
-                            printf("Error:%s has been modified",p_cmp_name);
-                            int ret=stat(p_cmp_name,&statbuf);
-                            if(ret != 0)
-                            {
-                                LOGE("Error:%s is not exist\n",p_cmp_name);
-                            }
-                            time_t modify=statbuf.st_mtime;
-                            printf("on %s\n", ctime(&modify));
-                         }
-                         else
-                         {
-                             printf("Error:%s is modifyed\n",p_name);
-                         }
-                         found=1;
-                         break;
-                                
-                      }
-        
-                  }
-              }
-              if(!found)
-              {
-                  LOGE("Error:not found a lost file\n");
-                  fclose(fp_info);
-                  return -1;
-              }
-                
-          }
-      }
-    else
-    {
-        printf("fopen error,error reason is %s\n",strerror(errno));
-        return -1;
-    }
-    fclose(fp_info);
-    return 0;    
 }
 
 static int encrypt_file_doub_check()
@@ -1115,6 +1120,7 @@ int check(){
         LOGE("list root file error\n");
     }
     //lost
+    printf("\n>> Lost File List <<\n");
     for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){
         if(test_bit(cper)){
             //checkResult=false;
@@ -1122,23 +1128,25 @@ int check(){
         }
     }
     //modify
+    printf("\n>> Modified File List <<\n");
     for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){           
         if(!test_bit_m(cper)){
             checkResult=false;
             list_modify_file(cper);    
         }
     }
+    printf("\n\n");
     if(check_file_result->n_newfile){
-        printf("Error:found %d new files\n",check_file_result->n_newfile);
+        printf("[Report] found %d new files\n",check_file_result->n_newfile);
     }
     if(check_file_result->n_lostfile){
-        printf("Error:found %d lost files\n",check_file_result->n_lostfile);
+        printf("[Report] found %d lost files\n",check_file_result->n_lostfile);
     }
     if(check_file_result->n_modifyfile){
-        printf("Error:found %d modified files\n",check_file_result->n_modifyfile);
+        printf("[Report] found %d modified files\n",check_file_result->n_modifyfile);
     }
     if(check_file_result->n_rootfile){
-        printf("Error:found %d root files\n",check_file_result->n_rootfile);
+        printf("[Report] found %d root files\n",check_file_result->n_rootfile);
     }
 
     //退出前清空一些数据,释放内存
