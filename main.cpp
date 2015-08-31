@@ -21,4 +21,5 @@ int main(){
 		case(CHECK_IMAGE_ERR):				printf("[error] CHECK_IMAGE_ERR\n");			break;
 		default:							printf("[error] unknow error\n");				break;
 	}
+	printf("\n");
 }
