@@ -40,7 +40,8 @@ def cal_system_file_crc_noencry(file_count,in_dir):
 			if not os.path.islink(os.path.join(root,file)):
 				filemd5=mymd5.hexdigest()
 			else:
-				filemd5=0
+				#filemd5=0
+				filemd5="0"
 			fo.write(filemd5)
 			fo.write("\t")
 			filepath=os.path.join(root,file)	

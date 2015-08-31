@@ -2,8 +2,9 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES += \
-    md5_check.cpp \
+	cr32.c \
     md5.c \
+    check.cpp \
     main.cpp
 
 LOCAL_MODULE := checkmd5
