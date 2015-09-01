@@ -8,7 +8,7 @@ int main(){
 	int ret = 0;
 
 	printf("List:\n");
-	ret = list();
+	ret = main_list();
 
 	return ret;
 }

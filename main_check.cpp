@@ -6,7 +6,7 @@
 
 int main(){
 	int ret = CHECK_PASS;
-	ret = check();
+	ret = main_check();
 	printf("\n\n>>>>> RESULT <<<<<\n");
 	switch(ret){
     	case(CHECK_PASS):					printf("[success]\n");							break;

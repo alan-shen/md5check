@@ -55,9 +55,6 @@ static struct last_check_file*check_file_result;
 
 int root_to_check[MAX_ROOT_TO_CHECK]={0};
 
-img_checksum_t computed_checksum[PART_MAX];
-img_checksum_t expected_checksum[PART_MAX];
-
 static const char *SYSTEM_ROOT = "/system/";
 
 static const char* file_to_check[]={
