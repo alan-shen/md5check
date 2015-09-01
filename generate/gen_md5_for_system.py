@@ -184,7 +184,7 @@ def cal_system_file_crc(file_count,in_dir):
 
 def gen_zip_file(zipname,file_count,vdoub_check):
 	if(os.path.isfile(zipname)):
-		print "recovery_rootcheck is already is system/data,build otapackage?"
+		print "system_checksum is already is system/data,build otapackage?"
 		os.remove(zipname)
 	f_zip=zipfile.ZipFile(zipname,"w",zipfile.ZIP_DEFLATED)
 	if(os.path.isfile(file_count)):
@@ -224,7 +224,7 @@ def main(argv):
 	file_count=out_dir+"/file_count"
 	crc_count=out_dir+"/crc_count"
 	vdoub_check=out_dir+"/doub_check"
-	zipname=out_dir+"/recovery_rootcheck"
+	zipname=out_dir+"/system_checksum"
 
 	print "cal system file crc begin"	
 	cal_system_file_crc(file_count,in_dir)

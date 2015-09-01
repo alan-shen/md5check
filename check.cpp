@@ -67,7 +67,7 @@ static const char* file_to_check[]={
 static const char* file_to_pass[]={
 								"recovery-from-boot.p",
 								"install-recovery.sh",
-								"recovery_rootcheck",
+								"system_checksum",
 								//"build.prop",
 								//"S_ANDRO_SFL.ini",
 								"recovery.sig",
@@ -843,7 +843,7 @@ static int load_zip_file()
 {
     const char *FILE_COUNT_ZIP="file_count";
     const char *DOUBLE_DYW_CHECK="doub_check";
-    const char *ZIP_FILE_ROOT="/system/data/recovery_rootcheck";
+    const char *ZIP_FILE_ROOT="/system/system_checksum";
     
     ZipArchive zip;
     //struct stat statbuf;
