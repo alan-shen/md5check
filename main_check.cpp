@@ -5,9 +5,11 @@
 #include "check.h"      
 
 int main(){
-	int ret = CHECK_PASS;
-	ret = main_check();
-	printf("\n\n>>>>> RESULT <<<<<\n");
+	//int ret = CHECK_PASS;
+	bool ret = main_check();
+	printf("\n\n>>>>> RESULT <<<<< %s!!\n", ret==true?"Success":"Fail");
+	
+#if 0
 	switch(ret){
     	case(CHECK_PASS):					printf("[success]\n");							break;
 		case(CHECK_FAIL):					printf("[error] CHECK_FAIL\n");					break;
@@ -21,5 +23,6 @@ int main(){
 		case(CHECK_IMAGE_ERR):				printf("[error] CHECK_IMAGE_ERR\n");			break;
 		default:							printf("[error] unknow error\n");				break;
 	}
+#endif
 	printf("\n");
 }

@@ -65,13 +65,13 @@ static const char* file_to_check[]={
 								};
 
 static const char* file_to_pass[]={
-								"recovery-from-boot.p",
-								"install-recovery.sh",
-								"recovery_rootcheck",
-								"build.prop",
-								"S_ANDRO_SFL.ini",
-								"recovery.sig",
-								"checkmd5"
+								//"recovery-from-boot.p",
+								//"install-recovery.sh",
+								//"recovery_rootcheck",
+								//"build.prop",
+								//"S_ANDRO_SFL.ini",
+								//"recovery.sig",
+								//"checkmd5"
 								};
 
 /*
@@ -1091,6 +1091,8 @@ int main_list(char *fliter){
 int main_check(){
 	int per,cper;
 	int ret = 0;
+
+	bool realresult = true;
  
 	printf("Now check begins, please wait.....\n");
 	ret = load_all();
@@ -1141,9 +1143,11 @@ int main_check(){
 		printf("[Report] found %d new files\n",check_file_result->n_newfile);
 	}
 	if(check_file_result->n_lostfile){
+		realresult = false;
 		printf("[Report] found %d lost files\n",check_file_result->n_lostfile);
 	}
 	if(check_file_result->n_modifyfile){
+		realresult = false;
 		printf("[Report] found %d modified files\n",check_file_result->n_modifyfile);
 	}
 	if(check_file_result->n_rootfile){
@@ -1159,11 +1163,5 @@ int main_check(){
 	free(check_file_result);
 
 	//返回
-	if(checkResult){
-		return CHECK_PASS;
-	}
-	else{
-		checkResult=true;
-		return CHECK_FAIL;
-	}
+	return realresult;
 }
