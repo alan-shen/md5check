@@ -1,5 +1,3 @@
-/*md5.c for root_check
-*/
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
