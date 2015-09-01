@@ -32,7 +32,7 @@ extern "C" {
 
 static const char *TEMP_FILE_IN_RAM="/tmp/system_dencrypt";
 static const char *TEMP_IMAGE_IN_RAM="/tmp/image_dencrypt";
-static const char *CRC_COUNT_TMP="/tmp/crc_count";
+//static const char *CRC_COUNT_TMP="/tmp/crc_count";
 static const char *FILE_COUNT_TMP="/tmp/file_count";
 static const char *DYW_DOUB_TMP="/tmp/doub_check";
 static const char *FILE_NEW_TMP="/tmp/list_new_file";
@@ -806,15 +806,13 @@ static int encrypt_file_doub_check()
     char buf[512];
     FILE *fp_info;
     unsigned int file_count_crc;
-    unsigned int crc_count_crc;
     unsigned int nCS = 0;
     unsigned char nMd5[MD5_LENGTH];
     fp_info = fopen(DYW_DOUB_TMP, "r");
     if(fp_info){
         if(fgets(buf, sizeof(buf), fp_info) != NULL){
-            if (sscanf(buf,"%u    %u", &file_count_crc,&crc_count_crc) == 2){
+            if (sscanf(buf,"%u", &file_count_crc) == 1){
                 check_file_result->file_count_check=file_count_crc;
-                check_file_result->crc_count_check=crc_count_crc;
             }
             else {
                 printf("double check file is error\n");
@@ -844,10 +842,8 @@ static int encrypt_file_doub_check()
 static int load_zip_file()
 {
     const char *FILE_COUNT_ZIP="file_count";
-    const char *CRC_COUNT_ZIP="crc_count";
     const char *DOUBLE_DYW_CHECK="doub_check";
     const char *ZIP_FILE_ROOT="/system/data/recovery_rootcheck";
-    //const char *ZIP_FILE_ROOT_TEMP="/system/recovery_rootcheck";
     
     ZipArchive zip;
     //struct stat statbuf;
@@ -859,7 +855,6 @@ static int load_zip_file()
         return CHECK_MOUNT_ERR;
     }
 
-    //ret=stat(ZIP_FILE_ROOT_TEMP,&statbuf);
     printf("load zip file from %s\n",ZIP_FILE_ROOT);
     err = mzOpenZipArchive(map.addr, map.length, &zip);
     if (err != 0) 
@@ -897,37 +892,6 @@ static int load_zip_file()
     else
     {
             printf("%s is ok\n", FILE_COUNT_TMP);
-    }
-    
-    const ZipEntry* crc_count =
-    mzFindZipEntry(&zip,CRC_COUNT_ZIP);
-    if (crc_count== NULL) 
-    {
-            mzCloseZipArchive(&zip);
-            sysReleaseMap(&map);
-            return CHECK_NO_KEY;
-    }
-    unlink(CRC_COUNT_TMP);
-    int fd_crc = creat(CRC_COUNT_TMP, 0755);
-    if (fd_crc< 0) 
-    {
-            mzCloseZipArchive(&zip);
-            printf("Can't make %s\n", CRC_COUNT_TMP);
-            sysReleaseMap(&map);
-            return CHECK_NO_KEY;
-    }
-    bool ok_crc = mzExtractZipEntryToFile(&zip, crc_count, fd_crc);
-    close(fd_crc);
-    
-    if (!ok_crc) 
-    {
-            printf("Can't copy %s\n", CRC_COUNT_ZIP);
-            sysReleaseMap(&map);
-            return CHECK_NO_KEY;
-    }
-    else
-    {
-            printf("%s is ok\n", CRC_COUNT_TMP);
     }
 
     const ZipEntry* dcheck_crc =
@@ -1097,7 +1061,7 @@ int main_check(){
 	ret = load_all();
 	if(ret != CHECK_PASS){
 		printf("Load check file fail!\n");
-		return CHECK_NO_KEY;
+		return false;
 	}
  
 	//校验SYSTEM......

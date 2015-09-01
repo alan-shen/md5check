@@ -128,20 +128,6 @@ def check_image_lk(fd,lk,s_str):
 	fd.write(name_md)
 	fd.write("\n")
 
-	
-def cal_image_crc(path,lk,logo,recovery,bootimage):
-	s_lk="lk.bin"
-	#s_preloader="preloder.bin"
-	s_logo="logo.bin"
-	s_recovery="recovery.img"
-	s_bootimage="boot.img"
-	f_crc= open(path, "w")	 
-	check_image_lk(f_crc,lk,s_lk)
-	check_image_lk(f_crc,logo,s_logo)
-	check_image_lk(f_crc,recovery,s_recovery)
-	check_image_lk(f_crc,bootimage,s_bootimage)
-	f_crc.close()
-
 def cal_system_file_crc(file_count,in_dir):
 	value=-1
 	global ENCRYPT_KEY
@@ -196,7 +182,7 @@ def cal_system_file_crc(file_count,in_dir):
 	crc=crc&0xffffffff	
 	fo.close()
 
-def gen_zip_file(zipname,file_count,crc_count,vdoub_check):
+def gen_zip_file(zipname,file_count,vdoub_check):
 	if(os.path.isfile(zipname)):
 		print "recovery_rootcheck is already is system/data,build otapackage?"
 		os.remove(zipname)
@@ -206,11 +192,6 @@ def gen_zip_file(zipname,file_count,crc_count,vdoub_check):
 		common.ZipWriteStr(f_zip, "file_count", f_fc)
 	else:
 		print "Error",file_count,"is not exist"
-	if(os.path.isfile(crc_count)):
-		f_cc=open(crc_count).read()
-		common.ZipWriteStr(f_zip, "crc_count", f_cc)
-	else:
-		print "Error",crc_count,"is not exist"
 	if(os.path.isfile(vdoub_check)):
 		f_dc=open(vdoub_check).read()
 		common.ZipWriteStr(f_zip, "doub_check", f_dc)
@@ -218,7 +199,7 @@ def gen_zip_file(zipname,file_count,crc_count,vdoub_check):
 		print "Error",vdoub_check,"is not exist"
 	f_zip.close()
 
-def gen_double_check(file_count,crc_count,vdoub_check):
+def gen_double_check(file_count,vdoub_check):
 	fo = open(vdoub_check, "w")
 	crc32=0
 	if os.path.isfile(file_count) and not os.path.islink(file_count):
@@ -232,33 +213,12 @@ def gen_double_check(file_count,crc_count,vdoub_check):
 		fo.write(str(crc32))
 		fo.write("\t")
 		frb.close()
-	crc32=0
-	if os.path.isfile(crc_count) and not os.path.islink(crc_count):
-		frb=open(crc_count,'rb')
-		while True:
-			tmp=frb.read(4*1024)
-			if tmp=='':
-				break
-			crc32 += fileCRC32(crc_count,crc32,tmp)
-		crc32=crc32&0xffffffff
-		fo.write(str(crc32))
-		fo.write("\n")
-		frb.close()
 	fo.close()
 
 def main(argv):
 	print "crc and md5 generate start"
-	lk=argv[1]
-	#preloader=argv[2]
-	recovery=argv[2]
-	bootimage=argv[3]
-	logo=argv[4]
-	out_dir = argv[5]
+	out_dir = argv[1]
 	in_dir = argv[0]
-	print "lk=",lk
-	print "recovery=",recovery
-	print "boot=",bootimage
-	print "logo=",logo
 	print "in_dir=",in_dir
 	print "out_dir=",out_dir
 	file_count=out_dir+"/file_count"
@@ -270,23 +230,17 @@ def main(argv):
 	cal_system_file_crc(file_count,in_dir)
 	print "cal system file crc end"
 	
-	print "cal image crc begin"
-	cal_image_crc(crc_count,lk,logo,recovery,bootimage)	
-	print "cal image crc end"
-	
 	print "cal double crc check begin"
-	gen_double_check(file_count,crc_count,vdoub_check)
+	gen_double_check(file_count,vdoub_check)
 	print "cal double crc check end"
 	
 	print "generate zipfile begin"
-	gen_zip_file(zipname,file_count,crc_count,vdoub_check)
+	gen_zip_file(zipname,file_count,vdoub_check)
 	print "generate zipfile end"
 	
 	print "delete temporary files begin"
 	if(os.path.isfile(file_count)):
 		os.remove(file_count)
-	if(os.path.isfile(crc_count)):
-		os.remove(crc_count)
 	if(os.path.isfile(vdoub_check)):
 		os.remove(vdoub_check)
 	print "delete temporary files end"
