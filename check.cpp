@@ -65,13 +65,12 @@ static const char* file_to_check[]={
 								};
 
 static const char* file_to_pass[]={
-								//"recovery-from-boot.p",
-								//"install-recovery.sh",
-								//"recovery_rootcheck",
+								"recovery-from-boot.p",
+								"install-recovery.sh",
+								"recovery_rootcheck",
 								//"build.prop",
 								//"S_ANDRO_SFL.ini",
-								//"recovery.sig",
-								//"checkmd5"
+								"recovery.sig",
 								};
 
 /*
