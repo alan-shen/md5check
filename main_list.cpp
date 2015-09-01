@@ -5,7 +5,7 @@
 #include <getopt.h>
 #include "check.h"      
 
-char *gCmdName = "mi_md5list";
+const char *gCmdName = "mi_md5list";
 
 void help(void){
 	printf("%s:\n\n", gCmdName);
@@ -20,7 +20,7 @@ int main(int argc, char **argv){
 	int type;
     int opt;
     int option_index = 0;
-    char *optstring = ":hp:";
+    const char *optstring = ":hp:";
     static struct option long_options[] = {
         {   "path", required_argument, NULL, 'p'},
         {   "help", no_argument,       NULL, 'h'},

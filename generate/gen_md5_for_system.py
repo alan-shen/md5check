@@ -170,10 +170,10 @@ def cal_system_file_crc(file_count,in_dir):
 			fo.write("\t")
 			if not os.path.islink(os.path.join(root,file)):
 				filemd5=encrypt(key,mymd5.hexdigest())
-				#print ("\t>%60s    %08x    %32s" %(os.path.join(root,file).split(in_dir)[1], crc32, mymd5.hexdigest()))
+				print ("\t>%60s    %08x    %32s" %(os.path.join(root,file).split(in_dir)[1], crc32, mymd5.hexdigest()))
 			else:
 				filemd5=encrypt(key,0)
-				#print ("\t>%60s    %08x    %32s" %(os.path.join(root,file).split(in_dir)[1], crc32, "0"))
+				print ("\t>%60s    %08x    %32s" %(os.path.join(root,file).split(in_dir)[1], crc32, "0"))
 			fo.write(filemd5)
 			fo.write("\n")
 			number+=1

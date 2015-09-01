@@ -829,6 +829,7 @@ static int load_zip_file()
 {
     const char *FILE_COUNT_ZIP="file_count";
     const char *DOUBLE_DYW_CHECK="doub_check";
+	//TODO: shenpengru: need support double system partition!!!
     const char *ZIP_FILE_ROOT="/system/system_checksum";
     
     ZipArchive zip;
@@ -1052,6 +1053,7 @@ int main_check(){
  
 	//校验SYSTEM......
 	printf("\n\n========== ========== START SYSTEM MD5 CHECK ========== ==========\n");
+	//TODO: shenpengru: need support double system partition!!!
 	if(false == crc_compare(SYSTEM_ROOT)){
 		checkResult = false;
 	}
