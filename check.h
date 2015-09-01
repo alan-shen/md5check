@@ -50,7 +50,7 @@ static void hextoi_md5(unsigned char p_crc[MD5_LENGTH*2]){
 }
 
 int main_check();
-int main_list();
+int main_list(char *fliter);
 
 #endif
 

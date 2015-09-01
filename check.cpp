@@ -1045,7 +1045,7 @@ int load_all(){
 /*
  * Just for unzip+decrypt the check file and list the path+crc32+md5sum.
  */
-int main_list(){
+int main_list(char *fliter){
 	int ret=0;
 	FILE *fp_info;
 	char buf[512];
@@ -1063,11 +1063,20 @@ int main_list(){
 
 	fp_info = fopen(TEMP_FILE_IN_RAM, "r");
 	if(fp_info){
+		printf("-------------------------------------------------------------\n");
 		if(fgets(buf, sizeof(buf), fp_info) != NULL){
 			while(fgets(buf, sizeof(buf), fp_info)){
-				printf("%s", buf);
+				if(fliter != NULL){
+					if(strstr(buf,fliter)!=NULL){
+						printf("%s", buf);
+					}
+				}
+				else{
+					printf("%s", buf);
+				}
 			}
 		}
+		printf("-------------------------------------------------------------\n");
 	}
 	else{
 		printf("Open fail\n");
