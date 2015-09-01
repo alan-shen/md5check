@@ -11,3 +11,28 @@ Structure Of Checksum File:
  
 
 =======================================================================================================
+How to generate the checksum file in your prj?
+++++++++++++++++++++++++++++++++++++++++++++++
+
+diff --git a/core/Makefile b/core/Makefile
+index 0869f11..9d54e1d 100644
+--- a/core/Makefile
++++ b/core/Makefile
+@@ -1030,7 +1030,13 @@ define build-systemimage-target
+   @mkdir -p $(dir $(1)) $(systemimage_intermediates) && rm -rf $(systemimage_intermediates)/system_image_info.txt
+   $(call generate-userimage-prop-dictionary, $(systemimage_intermediates)/system_image_info.txt, \
+       skip_fsck=true)
+   $(hide) PATH=$(foreach p,$(INTERNAL_USERIMAGES_BINARY_PATHS),$(p):)$$PATH \
++          $(if $(filter $(strip $(MTK_EMULATOR_SUPPORT)),no),
++            python ./system/core/md5check/generate/gen_md5_for_system.py \
++        $(TARGET_OUT) \
++        $(TARGET_OUT),
++            @echo no need generate checksum)
+       ./build/tools/releasetools/build_image.py \
+
+=======================================================================================================
+
+# mi_md5chk     -    for comapre checksum in "/system/system_checksum" with loacl system files.
+# mi_md5list    -	 for list the checksum in "/system/system_checksum"
+
+=======================================================================================================

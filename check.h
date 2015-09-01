@@ -1,9 +1,5 @@
-/*root_check.h for root_check*/
-
-#ifndef __ROOT_CHECK__
-#define __ROOT_CHECK__
-#define MTK_ROOT_NORMAL_CHECK	1
-#define MTK_ROOT_ADVANCE_CHECK 	1
+#ifndef __CHECK__
+#define __CHECK__
 enum
 {
 	CHECK_PASS,

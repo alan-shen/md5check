@@ -253,7 +253,6 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
                             found=1;
                             int rettmp = 0;
                             clear_bit(p_number);
-#ifdef MTK_ROOT_NORMAL_CHECK                                
                             if(p_size==nCS){
                                 //printf("%s crc check pass\n",path);
                             }
@@ -264,9 +263,7 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
                                 //fclose(fp_info);                                        
                                 rettmp = CHECK_FILE_NOT_MATCH;
                             }
-#endif
 
-#ifdef MTK_ROOT_ADVANCE_CHECK
                             if(p_md[1]=='\0')
                                 p_md[1]='0';
                             hextoi_md5(p_md);
@@ -274,7 +271,6 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
                                 //printf("%s md5 check pass\n",path);
                             }
                             else{
-#if 1
                                 int i;
                                 for(i=0;i<16;i++){
                                     printf("%02x",nMd5[i]);
@@ -282,7 +278,6 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
                                 for(i=0;i<16;i++){
                                     printf("%02x", p_md[i]);
                                 }
-#endif
                                 printf("<<ERROR>>\n");
                                 //check_file_result->n_modifyfile+=1;
                                 printf("Error:%s has been modified md5",path);
@@ -296,7 +291,6 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
                                 //return CHECK_FILE_NOT_MATCH;
                                 rettmp = CHECK_FILE_NOT_MATCH;
                             }
-#endif
                             if(rettmp){
                                 check_file_result->n_modifyfile+=1;
                                 clear_bit_m(p_number);
@@ -346,11 +340,9 @@ static int crc_compute_for_local( const char* path, unsigned int* nCS, unsigned 
     int i = 0;
     *nCS = 0;
     
-#ifdef MTK_ROOT_ADVANCE_CHECK
     MD5_CTX md5;
     MD5Init(&md5);
     memset(nMd5, 0, MD5_LENGTH);
-#endif
     struct stat st;
     memset(&st,0,sizeof(st));
     if ( path == NULL ){
@@ -377,16 +369,10 @@ static int crc_compute_for_local( const char* path, unsigned int* nCS, unsigned 
         rRead_count = fread(buf, 1, sizeof(buf), fp);
         if( rRead_count <=0 )
             break;
-#ifdef MTK_ROOT_NORMAL_CHECK        
          *nCS += crc32(*nCS, buf, rRead_count);
-#endif
-#ifdef MTK_ROOT_ADVANCE_CHECK
          MD5Update(&md5,(unsigned char*)buf, rRead_count);
-#endif
     }
-#ifdef MTK_ROOT_ADVANCE_CHECK
     MD5Final(&md5, nMd5);
-#endif
     fclose(fp);
     return 0;
 }
