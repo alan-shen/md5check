@@ -16,7 +16,7 @@ void help(void){
 int main(int argc, char **argv){
 	int ret = 0;
 
-	char fliter[512];
+	char *fliter = NULL;
 	int type;
     int opt;
     int option_index = 0;
@@ -30,6 +30,7 @@ int main(int argc, char **argv){
 	while( (opt = getopt_long(argc, argv, optstring, long_options, &option_index)) != -1 ){
         switch( opt ){
             case 'p':
+				fliter = (char*)malloc(512);
                 strcpy(fliter, optarg);
                 printf("Fliter is [%s]\n", fliter);
                 break;
@@ -49,8 +50,10 @@ int main(int argc, char **argv){
 	printf("List:\n");
 	if(fliter == NULL)
 		main_list(NULL);
-	else
+	else{
 		main_list(fliter);
+		free(fliter);
+	}
 
 	return ret;
 }
