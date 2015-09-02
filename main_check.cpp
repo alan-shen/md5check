@@ -1,15 +1,52 @@
 #include <errno.h>      
 #include <stdio.h>            
 #include <stdlib.h>     
-#include <string.h>      
+#include <string.h>
+#include <getopt.h> 
 #include "check.h"      
 
-int main(){
+int main(int argc, char** argv){
+    char *part   = NULL;
+    int opt;
+    int option_index = 0;
+    const char *optstring = ":hc:";
+    static struct option long_options[] = { 
+        {  "check", required_argument, NULL, 'c'},
+        {   "help", no_argument,       NULL, 'h'},
+        {0, 0, 0, 0}
+    };  
+
+    while( (opt = getopt_long(argc, argv, optstring, long_options, &option_index)) != -1 ){
+        switch( opt ){
+            case 'c':
+                part   = (char*)malloc(512);
+                strcpy(  part, optarg);
+                printf("Check partition [%s]\n", part);
+                break;
+            case 'h':
+                exit(0);
+                break;
+            case '?':
+            default:
+                printf("\nERROR: Unknown options!\n");
+                exit(1);
+                break;
+        }   
+    }
+
 	//int ret = CHECK_PASS;
-	char *part = "/system";
+	//char *part = "/system";
+	if(part == NULL){
+		part = (char*)malloc(512);
+		strcpy(part, "/system");
+	}
+
 	bool ret = main_check(part);
 	printf("\n\n>>>>> RESULT <<<<< %s!!\n", ret==true?"Success":"Fail");
 	
+	if(part != NULL){
+		free(part);
+	}
 #if 0
 	switch(ret){
     	case(CHECK_PASS):					printf("[success]\n");							break;

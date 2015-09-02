@@ -155,7 +155,7 @@ static int clear_selinux_file(char* path)
             
             if(found==0)
             {
-                SLOGI("found a new file,filename is %s",path);
+                SLOGI("-found a new file,filename is %s\n",path);
                 check_file_result->n_newfile+=1;
                 
                 if(access(FILE_NEW_TMP,0)==-1)
@@ -229,7 +229,7 @@ static int clear_selinux_dir(char const* path)
     return CHECK_PASS;
 }
 
-static int crc_compare_really(char* path, int nCS, char* nMd5)
+static int crc_compare_really(char* path_local, int nCS, char* nMd5)
 {
     int found=0;
     int ret=0;
@@ -242,6 +242,13 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
     int p_size;
     int p_number;
     struct stat statbuf;
+
+	char *path;
+	path = strstr(path_local, "/system/");
+	if(path == NULL){
+		path = path_local;
+	}
+	//SLOGI(">> path: %s, path_loacl: %s\n", path, path_local);
     
     fp_info = fopen(TEMP_FILE_IN_RAM, "r");
     if(fp_info){
@@ -314,7 +321,7 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
             }
             
             if(found==0){
-                SLOGI("found a new file,filename is %s",path);
+                SLOGI("found a new file,filename is %s\n",path);
                 check_file_result->n_newfile+=1;
                 
                 if(access(FILE_NEW_TMP,0)==-1){
@@ -444,7 +451,6 @@ static bool crc_compare( char const*dir)
             }
             if(find_pass==0){
                 SLOGI("scanning **** %s ****\n",dp->d_name);
-                SLOGI("scanning **** %s ****\n",dp->d_name);
                 if(0 == crc_compute_for_local(newdir, &nCS, nMd5)){
                     if (crc_compare_really(newdir, nCS, (char*)nMd5)!=0){
                         SLOGI("Error:%s check fail\n",newdir);
@@ -539,7 +545,7 @@ static int list_lost_file(int number)
                     }
                 if(!found)
                     {
-                        SLOGI("Error:not found a lost file\n");
+                        SLOGI("\tError:not found a lost file: %d\n", number);
                         fclose(fp_info);
                         return -1;
                     }
@@ -634,7 +640,7 @@ static int list_modify_file(int number)
               }
               if(!found)
               {
-                  SLOGI("Error:not found a lost file\n");
+                  SLOGI("\tError:not found a modify file %d\n", number);
                   fclose(fp_info);
                   return -1;
               }
@@ -1095,7 +1101,8 @@ int main_check(char *part){
 	}
 	//lost
 	SLOGI("\n>> Lost File List <<\n");
-	for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){
+	//for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){
+	for(cper=0;cper<check_file_result->expect_file_number-1;cper++){
 		if(test_bit(cper)){
 			//checkResult=false;
 			list_lost_file(cper);
@@ -1103,7 +1110,8 @@ int main_check(char *part){
 	}
 	//modify
 	SLOGI("\n>> Modified File List <<\n");
-	for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){           
+	//for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){           
+	for(cper=0;cper<check_file_result->expect_file_number-1;cper++){
 		if(!test_bit_m(cper)){
 			checkResult=false;
 			list_modify_file(cper);    
