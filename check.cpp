@@ -1,3 +1,5 @@
+#define LOG_TAG "UpdateCheck"
+
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -18,6 +20,15 @@
 #include "minzip/DirUtil.h"
 #include "minzip/SysUtil.h"
 #include "minzip/Zip.h"
+
+#ifdef USE_LOGCAT_LOG
+#include "log/log.h"
+#else
+#undef  SLOGI
+#define SLOGI printf
+#undef  SLOGE
+#define SLOGE printf
+#endif
 
 #include "check.h"
 extern "C" {
@@ -144,7 +155,7 @@ static int clear_selinux_file(char* path)
             
             if(found==0)
             {
-                printf("found a new file,filename is %s",path);
+                SLOGI("found a new file,filename is %s",path);
                 check_file_result->n_newfile+=1;
                 
                 if(access(FILE_NEW_TMP,0)==-1)
@@ -158,7 +169,7 @@ static int clear_selinux_file(char* path)
                 }
                 else
                 {
-                    printf("open %s error,error reason is %s\n",FILE_NEW_TMP,strerror(errno));
+                    SLOGI("open %s error,error reason is %s\n",FILE_NEW_TMP,strerror(errno));
                     return CHECK_ADD_NEW_FILE;
                 }        
                 checkResult=false;
@@ -170,7 +181,7 @@ static int clear_selinux_file(char* path)
     }
     else
     {
-        printf("open %s error,error reason is %s\n",TEMP_FILE_IN_RAM,strerror(errno));
+        SLOGI("open %s error,error reason is %s\n",TEMP_FILE_IN_RAM,strerror(errno));
         return CHECK_NO_KEY;
     }
     fclose(fp_info);
@@ -199,11 +210,11 @@ static int clear_selinux_dir(char const* path)
                     //path[0] = '/';
                     if(strstr(p_name,path)!=NULL) {
                         p_cmp_name=strstr(p_name,path);
-                        printf("%s file is selinux protected,just pass\n",p_cmp_name);
+                        SLOGI("%s file is selinux protected,just pass\n",p_cmp_name);
                         clear_bit(p_number);
                     }
 		            else {
-			            //printf("not found %s in orignal file,please check!",path);
+			            //SLOGI("not found %s in orignal file,please check!",path);
 			            continue;
 		            }
                 }
@@ -211,7 +222,7 @@ static int clear_selinux_dir(char const* path)
         }
     }
     else{
-        printf("open %s error,error reason is %s\n",TEMP_FILE_IN_RAM,strerror(errno));
+        SLOGI("open %s error,error reason is %s\n",TEMP_FILE_IN_RAM,strerror(errno));
         return CHECK_NO_KEY;
     }
     fclose(fp_info);
@@ -254,12 +265,12 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
                             int rettmp = 0;
                             clear_bit(p_number);
                             if(p_size==nCS){
-                                //printf("%s crc check pass\n",path);
+                                //SLOGI("%s crc check pass\n",path);
                             }
                             else{
-                                printf("expected crc is %u\n",p_size);
-                                printf("computed crc is %u\n",nCS);
-                                printf("%s is modifyed\n",path);
+                                SLOGI("expected crc is %u\n",p_size);
+                                SLOGI("computed crc is %u\n",nCS);
+                                SLOGI("%s is modifyed\n",path);
                                 //fclose(fp_info);                                        
                                 rettmp = CHECK_FILE_NOT_MATCH;
                             }
@@ -268,25 +279,25 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
                                 p_md[1]='0';
                             hextoi_md5(p_md);
                             if(memcmp(nMd5, p_md, MD5_LENGTH)==0){
-                                //printf("%s md5 check pass\n",path);
+                                //SLOGI("%s md5 check pass\n",path);
                             }
                             else{
                                 int i;
                                 for(i=0;i<16;i++){
-                                    printf("%02x",nMd5[i]);
+                                    SLOGI("%02x",nMd5[i]);
                                 }
                                 for(i=0;i<16;i++){
-                                    printf("%02x", p_md[i]);
+                                    SLOGI("%02x", p_md[i]);
                                 }
-                                printf("<<ERROR>>\n");
+                                SLOGI("<<ERROR>>\n");
                                 //check_file_result->n_modifyfile+=1;
-                                printf("Error:%s has been modified md5",path);
+                                SLOGI("Error:%s has been modified md5",path);
                                 ret=stat(path,&statbuf);
                                 if(ret != 0){
-                                    printf("Error:%s is not exist\n",path);
+                                    SLOGI("Error:%s is not exist\n",path);
                                 }
                                 time_t modify=statbuf.st_mtime;
-                                printf("on %s\n", ctime(&modify));
+                                SLOGI("on %s\n", ctime(&modify));
                                 //fclose(fp_info);
                                 //return CHECK_FILE_NOT_MATCH;
                                 rettmp = CHECK_FILE_NOT_MATCH;
@@ -303,7 +314,7 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
             }
             
             if(found==0){
-                printf("found a new file,filename is %s",path);
+                SLOGI("found a new file,filename is %s",path);
                 check_file_result->n_newfile+=1;
                 
                 if(access(FILE_NEW_TMP,0)==-1){
@@ -314,7 +325,7 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
                     fprintf(fp_new,"%s\n",path);
                 }
                 else{
-                    printf("open %s error,error reason is %s\n",FILE_NEW_TMP,strerror(errno));
+                    SLOGI("open %s error,error reason is %s\n",FILE_NEW_TMP,strerror(errno));
                     return CHECK_ADD_NEW_FILE;
                 }
                 checkResult=false;
@@ -325,7 +336,7 @@ static int crc_compare_really(char* path, int nCS, char* nMd5)
         }
     }
     else {
-        printf("open %s error,error reason is %s\n",TEMP_FILE_IN_RAM,strerror(errno));
+        SLOGI("open %s error,error reason is %s\n",TEMP_FILE_IN_RAM,strerror(errno));
         return CHECK_NO_KEY;
     }
     fclose(fp_info);
@@ -346,22 +357,22 @@ static int crc_compute_for_local( const char* path, unsigned int* nCS, unsigned 
     struct stat st;
     memset(&st,0,sizeof(st));
     if ( path == NULL ){
-        printf("crc_compute_for_local-> %s is null", path);
+        SLOGI("crc_compute_for_local-> %s is null", path);
         return -1;
     }
     if(lstat(path,&st)<0){
-        printf("\n %s does not exist,lsta fail", path);
+        SLOGI("\n %s does not exist,lsta fail", path);
         return 1;
     }
     if(S_ISLNK(st.st_mode)){
-        printf("%s is a link file,just pass\n", path);
+        SLOGI("%s is a link file,just pass\n", path);
         return 0;    
     }
 
     fp = fopen(path, "r");
     if( fp == NULL ){
-        printf("\ncrc_compute_for_local->path:%s ,fp is null", path);
-        printf("\nfopen fail reason is %s",strerror(errno));
+        SLOGI("\ncrc_compute_for_local->path:%s ,fp is null", path);
+        SLOGI("\nfopen fail reason is %s",strerror(errno));
         return -1;
     } 
     while(!feof(fp)){
@@ -388,12 +399,12 @@ static bool crc_compare( char const*dir)
 
     if ((d_fd = opendir(dir)) == NULL) {
         if(strcmp(dir,"/system/")==0) {
-            printf("open system dir fail,please check!\n");
+            SLOGI("open system dir fail,please check!\n");
             return false;
 	    } else {
-            printf("%s is selinux protected,this dir just pass!\n",dir);
+            SLOGI("%s is selinux protected,this dir just pass!\n",dir);
 	        if(clear_selinux_dir(dir) != 0) {
-                printf("clear selinux dir fail\n");
+                SLOGI("clear selinux dir fail\n");
             }
             return false;
         }
@@ -421,35 +432,36 @@ static bool crc_compare( char const*dir)
             for(; idx < sizeof(file_to_check)/sizeof(char*); idx++){
                 if(strcmp(dp->d_name, file_to_check[idx]) == 0){
                     root_to_check[idx]=1;
-                    printf("Dir_check---found a root File:  %s\n",dp->d_name);
+                    SLOGI("Dir_check---found a root File:  %s\n",dp->d_name);
                 }
             }
             for(; idy < sizeof(file_to_pass)/sizeof(char*); idy++){
                 if(strcmp(dp->d_name, file_to_pass[idy]) == 0){
-                    printf("Dir_check---found a file to pass:  %s\n",dp->d_name);
+                    SLOGI("Dir_check---found a file to pass:  %s\n",dp->d_name);
                     find_pass=1;
                     break;
                 }
             }
             if(find_pass==0){
-                printf("scanning **** %s ****\n",dp->d_name);
+                SLOGI("scanning **** %s ****\n",dp->d_name);
+                SLOGI("scanning **** %s ****\n",dp->d_name);
                 if(0 == crc_compute_for_local(newdir, &nCS, nMd5)){
                     if (crc_compare_really(newdir, nCS, (char*)nMd5)!=0){
-                        printf("Error:%s check fail\n",newdir);
+                        SLOGI("Error:%s check fail\n",newdir);
                         checkResult = false;
                     }
                     check_file_result->file_number_to_check++;
                 }else if(1 == crc_compute_for_local(newdir, &nCS, nMd5)) {
-                    printf("%s could be selinux protected\n",newdir);
+                    SLOGI("%s could be selinux protected\n",newdir);
                     //closedir(d_fd)
                     if (clear_selinux_file(newdir)!=0) {
-                        printf("Error:%s is a selinux file,clear bit fail\n",newdir);
+                        SLOGI("Error:%s is a selinux file,clear bit fail\n",newdir);
                         checkResult = false;
                     }
                     check_file_result->file_number_to_check++;
                     continue;
                 } else {
-                    printf("check %s error\n",newdir);
+                    SLOGI("check %s error\n",newdir);
                     closedir(d_fd);
                     return false;
                 }
@@ -472,7 +484,7 @@ static int list_root_file()
             if(root_to_check[idx]==1)
                 {
                     check_file_result->n_rootfile+=1;
-                    printf("found a root file,%s\n",file_to_check[idx]);
+                    SLOGI("found a root file,%s\n",file_to_check[idx]);
                 }
         }
     return 0;
@@ -502,7 +514,7 @@ static int list_lost_file(int number)
                                 {
                                     if(strstr(p_cmp_name, file_to_pass[idy]) != NULL)
                                     {
-                                        printf("\tname : %-50s --found a file to pass\n",p_cmp_name);
+                                        SLOGI("\tname : %-50s --found a file to pass\n",p_cmp_name);
                                         //checkResult=true;
                                         //break;
                                         return 0;
@@ -511,13 +523,13 @@ static int list_lost_file(int number)
                                 if(p_cmp_name != NULL)
                                 {
                                     check_file_result->n_lostfile+=1;
-                                    printf("\tname : %-50s is lost\n",p_cmp_name);
+                                    SLOGI("\tname : %-50s is lost\n",p_cmp_name);
                                     checkResult=false;
                                 }
                                 else
                                 {
                                     check_file_result->n_lostfile+=1;
-                                    printf("\tname : %-50s is lost\n",p_name);
+                                    SLOGI("\tname : %-50s is lost\n",p_name);
                                     checkResult=false;
                                 }
                                 found=1;
@@ -527,7 +539,7 @@ static int list_lost_file(int number)
                     }
                 if(!found)
                     {
-                        printf("Error:not found a lost file\n");
+                        SLOGI("Error:not found a lost file\n");
                         fclose(fp_info);
                         return -1;
                     }
@@ -536,7 +548,7 @@ static int list_lost_file(int number)
         }
     else
         {
-            printf("fopen error,error reason is %s\n",strerror(errno));
+            SLOGI("fopen error,error reason is %s\n",strerror(errno));
             return -1;
         }
     fclose(fp_info);
@@ -552,23 +564,23 @@ static int list_new_file()
     char buf[256];
     if(access(FILE_NEW_TMP,0)==-1)
     {
-        printf("%s is not exist\n",FILE_NEW_TMP);
+        SLOGI("%s is not exist\n",FILE_NEW_TMP);
         return 0;
     }
     fp_new= fopen(FILE_NEW_TMP, "r");
-    printf("\n>> New File List <<\n");
+    SLOGI("\n>> New File List <<\n");
     if(fp_new)
     {
         while (fgets(buf, sizeof(buf), fp_new)) {
             char *token = strtok(buf, "\n");
             int ret=stat(buf,&statbuf);
             time_t modify=statbuf.st_mtime;
-            printf("\tname : %-50s --Created on  : %s", token, ctime(&modify));
+            SLOGI("\tname : %-50s --Created on  : %s", token, ctime(&modify));
         }
     }
     else
         {
-            printf("open %s error,error reason is %s\n",FILE_NEW_TMP,strerror(errno));
+            SLOGI("open %s error,error reason is %s\n",FILE_NEW_TMP,strerror(errno));
             return -1;
         }
 
@@ -604,14 +616,14 @@ static int list_modify_file(int number)
                             int ret=stat(p_cmp_name,&statbuf);
                             if(ret != 0)
                             {
-                                printf("Error:%s is not exist\n",p_cmp_name);
+                                SLOGI("Error:%s is not exist\n",p_cmp_name);
                             }
                             time_t modify=statbuf.st_mtime;
-                            printf("\tname : %-50s --Modified on : %s",p_cmp_name, ctime(&modify));
+                            SLOGI("\tname : %-50s --Modified on : %s",p_cmp_name, ctime(&modify));
                          }
                          else
                          {
-                             printf("Error:%s is modifyed\n",p_name);
+                             SLOGI("Error:%s is modifyed\n",p_name);
                          }
                          found=1;
                          break;
@@ -622,7 +634,7 @@ static int list_modify_file(int number)
               }
               if(!found)
               {
-                  printf("Error:not found a lost file\n");
+                  SLOGI("Error:not found a lost file\n");
                   fclose(fp_info);
                   return -1;
               }
@@ -631,7 +643,7 @@ static int list_modify_file(int number)
       }
     else
     {
-        printf("fopen error,error reason is %s\n",strerror(errno));
+        SLOGI("fopen error,error reason is %s\n",strerror(errno));
         return -1;
     }
     fclose(fp_info);
@@ -658,7 +670,7 @@ static bool remove_check_dir(const char *dir_name)
     struct dirent *dp;
     DIR *d_fd;
     if ((d_fd = opendir(dir_name)) == NULL) {
-        printf("dir_check-<<<< %s not dir\n",dir_name);
+        SLOGI("dir_check-<<<< %s not dir\n",dir_name);
         return false;
     }
     while ((dp = readdir(d_fd)) != NULL) {
@@ -686,7 +698,7 @@ static bool remove_check_dir(const char *dir_name)
            to_remove_file=newdir;
            if(!remove_check_file(to_remove_file))
                {
-                   printf("Error:unlink %s fail\n",to_remove_file);
+                   SLOGI("Error:unlink %s fail\n",to_remove_file);
                }
          }
 }
@@ -697,27 +709,27 @@ static void remove_unneed_file()
 {
     if(!remove_check_file(TEMP_FILE_IN_RAM))
     {
-        printf("unlink temp system crc file error\n");
+        SLOGI("unlink temp system crc file error\n");
     }
     
     if(!remove_check_file(TEMP_IMAGE_IN_RAM))
     {
-        printf("unlink temp image crc file error\n");
+        SLOGI("unlink temp image crc file error\n");
     }
     
     if(!remove_check_file(FILE_NEW_TMP))
     {
-        printf("unlink temp new file error\n");
+        SLOGI("unlink temp new file error\n");
     }
     
     if(!remove_check_file(FILE_COUNT_TMP))
     {
-        printf("unlink temp new file error\n");
+        SLOGI("unlink temp new file error\n");
     }
     
     if(!remove_check_file(DYW_DOUB_TMP))
     {
-        printf("unlink temp new file error\n");
+        SLOGI("unlink temp new file error\n");
     }
 }
 
@@ -733,7 +745,7 @@ static char* decrypt_str(char *source,unsigned int key)
     int len=strlen(source);
     if(len%2 != 0)
     {
-        printf("Error,sourcr encrypt filename length is odd");
+        SLOGI("Error,sourcr encrypt filename length is odd");
         return NULL;
     }
     int len2=len/2;
@@ -762,14 +774,14 @@ static int check_file_number_insystem(int file_number)
     int p_number;
     int p_pnumber;
     fp_info = fopen(TEMP_FILE_IN_RAM, "r");
-    printf(">> check file num in system <<\n");
+    SLOGI(">> check file num in system <<\n");
     if(fp_info)
         {
             if (fgets(buf, sizeof(buf), fp_info) != NULL) {
                     if (sscanf(buf, "%d    %s %d", &p_pnumber,p_name, &p_number)== 3) {
                         if (!strcmp(p_name, "file_number_in_system_dayu")) {
                             check_file_result->expect_file_number=p_number;
-                            printf("\tp_number is : %d\n\tfile_number is : %d\n\tmodfy num is : %d,\n\tnewfile num is : %d\n\n",
+                            SLOGI("\tp_number is : %d\n\tfile_number is : %d\n\tmodfy num is : %d,\n\tnewfile num is : %d\n\n",
 									p_number,file_number,
 									check_file_result->n_modifyfile,
 									check_file_result->n_newfile);
@@ -780,7 +792,7 @@ static int check_file_number_insystem(int file_number)
         }
     else
         {
-            printf("fopen error,error reason is %s\n",strerror(errno));
+            SLOGI("fopen error,error reason is %s\n",strerror(errno));
             return 1;
         }
     fclose(fp_info);
@@ -801,23 +813,23 @@ static int encrypt_file_doub_check()
                 check_file_result->file_count_check=file_count_crc;
             }
             else {
-                printf("double check file is error\n");
+                SLOGI("double check file is error\n");
                 return CHECK_NO_KEY; 
             }     
         }
         else {
-            printf("double check file is null\n");
+            SLOGI("double check file is null\n");
             return CHECK_NO_KEY; 
         }
     }
     else{
-        printf("open %s error,error reason is %s\n",DYW_DOUB_TMP,strerror(errno));
+        SLOGI("open %s error,error reason is %s\n",DYW_DOUB_TMP,strerror(errno));
         return CHECK_NO_KEY;
     }
     
     if(0 == crc_compute_for_local(FILE_COUNT_TMP, &nCS, nMd5)){
         if(nCS!=check_file_result->file_count_check){
-            printf("file count double check fail\n");
+            SLOGI("file count double check fail\n");
             return CHECK_NO_KEY; 
         }
     }
@@ -838,15 +850,15 @@ static int load_zip_file()
     int err=1;
     MemMapping map;
     if (sysMapFile(ZIP_FILE_ROOT, &map) != 0) {
-        printf("failed to map file %s\n", ZIP_FILE_ROOT);
+        SLOGI("failed to map file %s\n", ZIP_FILE_ROOT);
         return CHECK_MOUNT_ERR;
     }
 
-    printf("load zip file from %s\n",ZIP_FILE_ROOT);
+    SLOGI("load zip file from %s\n",ZIP_FILE_ROOT);
     err = mzOpenZipArchive(map.addr, map.length, &zip);
     if (err != 0) 
     {
-        printf("Can't open %s\n(%s)\n", ZIP_FILE_ROOT, err != -1 ? strerror(err) : "bad");
+        SLOGI("Can't open %s\n(%s)\n", ZIP_FILE_ROOT, err != -1 ? strerror(err) : "bad");
         sysReleaseMap(&map);
         return CHECK_NO_KEY;
     }
@@ -863,7 +875,7 @@ static int load_zip_file()
     if (fd_file< 0) 
     {
             mzCloseZipArchive(&zip);
-            printf("Can't make %s:%s\n", FILE_COUNT_TMP, strerror(errno));
+            SLOGI("Can't make %s:%s\n", FILE_COUNT_TMP, strerror(errno));
             sysReleaseMap(&map);
             return CHECK_NO_KEY;
     }
@@ -872,13 +884,13 @@ static int load_zip_file()
     
     if (!ok_file) 
     {
-            printf("Can't copy %s\n", FILE_COUNT_ZIP);
+            SLOGI("Can't copy %s\n", FILE_COUNT_ZIP);
             sysReleaseMap(&map);
             return CHECK_NO_KEY;
     }
     else
     {
-            printf("%s is ok\n", FILE_COUNT_TMP);
+            SLOGI("%s is ok\n", FILE_COUNT_TMP);
     }
 
     const ZipEntry* dcheck_crc =
@@ -895,7 +907,7 @@ static int load_zip_file()
     if (fd_d< 0) 
     {
             mzCloseZipArchive(&zip);
-            printf("Can't make %s\n", DYW_DOUB_TMP);
+            SLOGI("Can't make %s\n", DYW_DOUB_TMP);
             sysReleaseMap(&map);
             return CHECK_NO_KEY;
     }
@@ -904,13 +916,13 @@ static int load_zip_file()
     close(fd_d);
     if (!ok_d) 
     {
-            printf("Can't copy %s\n", DOUBLE_DYW_CHECK);
+            SLOGI("Can't copy %s\n", DOUBLE_DYW_CHECK);
             sysReleaseMap(&map);
             return CHECK_NO_KEY;
     }
     else
     {
-        printf("%s is ok\n", DYW_DOUB_TMP);
+        SLOGI("%s is ok\n", DYW_DOUB_TMP);
     }
 
     mzCloseZipArchive(&zip);
@@ -946,19 +958,19 @@ static int load_system_encrypt_file()
                             
                             unsigned long crc;
                             crc = strtoul(p_pcrc, (char **)NULL, 10);
-                            //printf("p_pname:%s, crc32:%s %lu %d %d %d\n", p_pname, p_pcrc, crc, sizeof(long), sizeof(long long), sizeof(unsigned int));
+                            //SLOGI("p_pname:%s, crc32:%s %lu %d %d %d\n", p_pname, p_pcrc, crc, sizeof(long), sizeof(long long), sizeof(unsigned int));
                             fprintf(fp_tmp,"%d\t%s\t%lu\t%s\n",p_number,p_pname,crc, p_pmd5);
                     }
                 } 
             }
         }
         else {
-            printf("fopen error,error reason is %s\n",strerror(errno));
+            SLOGI("fopen error,error reason is %s\n",strerror(errno));
             return -1;
         }
     }
     else{
-        printf("fopen error,error reason is %s\n",strerror(errno));
+        SLOGI("fopen error,error reason is %s\n",strerror(errno));
         return CHECK_NO_KEY;
     }
     fclose(fp_info);
@@ -977,15 +989,15 @@ int load_all(){
 	memset(check_modify,0xff,sizeof(check_modify));
 
 	if(load_zip_file()){
-		printf("load source zip file fail\n");
+		SLOGI("load source zip file fail\n");
 		return CHECK_NO_KEY;
 	}
 	if(load_system_encrypt_file()){
-		printf("load system encrypt file fail\n");
+		SLOGI("load system encrypt file fail\n");
 		return CHECK_NO_KEY;
 	}
 	if(encrypt_file_doub_check()){
-		printf("encrypt file double check fail\n");
+		SLOGI("encrypt file double check fail\n");
 		return CHECK_NO_KEY;
 	}
 
@@ -1007,29 +1019,29 @@ int main_list(char *fliter){
   
 	ret = load_all();
 	if(ret != CHECK_PASS){
-		printf("Load check file fail!\n");
+		SLOGI("Load check file fail!\n");
 		return CHECK_NO_KEY;
 	}
 
 	fp_info = fopen(TEMP_FILE_IN_RAM, "r");
 	if(fp_info){
-		printf("-------------------------------------------------------------\n");
+		SLOGI("-------------------------------------------------------------\n");
 		if(fgets(buf, sizeof(buf), fp_info) != NULL){
 			while(fgets(buf, sizeof(buf), fp_info)){
 				if(fliter != NULL){
 					if(strstr(buf,fliter)!=NULL){
-						printf("%s", buf);
+						SLOGI("%s", buf);
 					}
 				}
 				else{
-					printf("%s", buf);
+					SLOGI("%s", buf);
 				}
 			}
 		}
-		printf("-------------------------------------------------------------\n");
+		SLOGI("-------------------------------------------------------------\n");
 	}
 	else{
-		printf("Open fail\n");
+		SLOGI("Open fail\n");
 	}
 
 	return 0;
@@ -1044,15 +1056,15 @@ int main_check(){
 
 	bool realresult = true;
  
-	printf("Now check begins, please wait.....\n");
+	SLOGI("Now check begins, please wait.....\n");
 	ret = load_all();
 	if(ret != CHECK_PASS){
-		printf("Load check file fail!\n");
+		SLOGI("Load check file fail!\n");
 		return false;
 	}
  
 	//校验SYSTEM......
-	printf("\n\n========== ========== START SYSTEM MD5 CHECK ========== ==========\n");
+	SLOGI("\n\n========== ========== START SYSTEM MD5 CHECK ========== ==========\n");
 	//TODO: shenpengru: need support double system partition!!!
 	if(false == crc_compare(SYSTEM_ROOT)){
 		checkResult = false;
@@ -1061,20 +1073,20 @@ int main_check(){
 	check_file_result->file_number_to_check+=1;
   
 	//显示检查结果 
-	printf("\n\n========== ========== SHOW THE RESULT ====== ========== ==========\n");
+	SLOGI("\n\n========== ========== SHOW THE RESULT ====== ========== ==========\n");
 	if (check_file_number_insystem(check_file_result->file_number_to_check)!=0){
 		checkResult=false;
 	}
 	//new
 	if(list_new_file()){
-		printf("list new file error\n");
+		SLOGI("list new file error\n");
 	}
 	//root
 	if(list_root_file()){
-		printf("list root file error\n");
+		SLOGI("list root file error\n");
 	}
 	//lost
-	printf("\n>> Lost File List <<\n");
+	SLOGI("\n>> Lost File List <<\n");
 	for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){
 		if(test_bit(cper)){
 			//checkResult=false;
@@ -1082,27 +1094,27 @@ int main_check(){
 		}
 	}
 	//modify
-	printf("\n>> Modified File List <<\n");
+	SLOGI("\n>> Modified File List <<\n");
 	for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){           
 		if(!test_bit_m(cper)){
 			checkResult=false;
 			list_modify_file(cper);    
 		}
 	}
-	printf("\n\n");
+	SLOGI("\n\n");
 	if(check_file_result->n_newfile){
-		printf("[Report] found %d new files\n",check_file_result->n_newfile);
+		SLOGI("[Report] found %d new files\n",check_file_result->n_newfile);
 	}
 	if(check_file_result->n_lostfile){
 		realresult = false;
-		printf("[Report] found %d lost files\n",check_file_result->n_lostfile);
+		SLOGI("[Report] found %d lost files\n",check_file_result->n_lostfile);
 	}
 	if(check_file_result->n_modifyfile){
 		realresult = false;
-		printf("[Report] found %d modified files\n",check_file_result->n_modifyfile);
+		SLOGI("[Report] found %d modified files\n",check_file_result->n_modifyfile);
 	}
 	if(check_file_result->n_rootfile){
-		printf("[Report] found %d root files\n",check_file_result->n_rootfile);
+		SLOGI("[Report] found %d root files\n",check_file_result->n_rootfile);
 	}
 
 	//退出前清空一些数据,释放内存

@@ -29,6 +29,12 @@ LOCAL_STATIC_LIBRARIES := $(common_static_lib)
 LOCAL_SHARED_LIBRARIES := $(common_share_lib)
 LOCAL_C_INCLUDES += $(common_c_includes)
 
+ifeq ($(strip $(UPDATESERVICE_HAVE_SYSTEM_MD5CHECK)),true)
+LOCAL_CFLAGS           += -DUSE_LOGCAT_LOG
+LOCAL_C_INCLUDES       += system/core/include
+LOCAL_STATIC_LIBRARIES += liblog
+endif
+
 LOCAL_MODULE := libmitvmd5
 include $(BUILD_STATIC_LIBRARY)
 
@@ -40,6 +46,12 @@ LOCAL_SRC_FILES += \
 LOCAL_STATIC_LIBRARIES := $(common_static_lib)
 LOCAL_SHARED_LIBRARIES := $(common_share_lib)
 LOCAL_C_INCLUDES += $(common_c_includes)
+
+ifeq ($(strip $(UPDATESERVICE_HAVE_SYSTEM_MD5CHECK)),true)
+LOCAL_CFLAGS           += -DUSE_LOGCAT_LOG
+LOCAL_C_INCLUDES       += system/core/include
+LOCAL_STATIC_LIBRARIES += liblog
+endif
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libmitvmd5
