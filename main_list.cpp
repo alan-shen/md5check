@@ -17,11 +17,13 @@ int main(int argc, char **argv){
 	int ret = 0;
 
 	char *fliter = NULL;
+	char *part   = NULL;
 	int type;
     int opt;
     int option_index = 0;
-    const char *optstring = ":hp:";
+    const char *optstring = ":hpc:";
     static struct option long_options[] = {
+        {  "check", required_argument, NULL, 'c'},
         {   "path", required_argument, NULL, 'p'},
         {   "help", no_argument,       NULL, 'h'},
         {0, 0, 0, 0}
@@ -33,6 +35,11 @@ int main(int argc, char **argv){
 				fliter = (char*)malloc(512);
                 strcpy(fliter, optarg);
                 printf("Fliter is [%s]\n", fliter);
+                break;
+            case 'c':
+				part   = (char*)malloc(512);
+                strcpy(  part, optarg);
+                printf("Check partition [%s]\n", part);
                 break;
             case 'h':
                 help();
@@ -47,13 +54,20 @@ int main(int argc, char **argv){
         }
     }
 
+	if(part==NULL){
+		part   = (char*)malloc(512);
+		strcpy(part, "/system");
+	}
+
 	printf("List:\n");
 	if(fliter == NULL)
-		main_list(NULL);
+		main_list(NULL, part);
 	else{
-		main_list(fliter);
+		main_list(fliter, part);
 		free(fliter);
 	}
+
+	free(part);
 
 	return ret;
 }
