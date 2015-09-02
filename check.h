@@ -45,8 +45,8 @@ static void hextoi_md5(unsigned char p_crc[MD5_LENGTH*2]){
 	}
 }
 
-int main_check();
-int main_list(char *fliter);
+int main_check(char *part);
+int main_list(char *fliter, char *part);
 
 #endif
 

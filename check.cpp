@@ -837,12 +837,17 @@ static int encrypt_file_doub_check()
 	return 0;
 }
 
-static int load_zip_file()
+static int load_zip_file(char *part)
 {
     const char *FILE_COUNT_ZIP="file_count";
     const char *DOUBLE_DYW_CHECK="doub_check";
 	//TODO: shenpengru: need support double system partition!!!
-    const char *ZIP_FILE_ROOT="/system/system_checksum";
+    //const char *ZIP_FILE_ROOT=strcat(part, "/system_checksum");
+	char *ZIP_FILE_ROOT;
+	char *checkfile = "/system_checksum";
+	char base[512];
+	strcpy(base, part);
+	ZIP_FILE_ROOT = strcat(base, checkfile);
     
     ZipArchive zip;
     //struct stat statbuf;
@@ -981,14 +986,14 @@ static int load_system_encrypt_file()
 /*
  * Unzip the check file and decrypt them.
  */
-int load_all(){
+int load_all(char *part){
 	check_file_result=(struct last_check_file*)malloc(sizeof(last_check_file));
 
 	memset(check_file_result,0,sizeof(last_check_file));
 	memset(check_map,0xff,sizeof(check_map));
 	memset(check_modify,0xff,sizeof(check_modify));
 
-	if(load_zip_file()){
+	if(load_zip_file(part)){
 		SLOGI("load source zip file fail\n");
 		return CHECK_NO_KEY;
 	}
@@ -1007,7 +1012,7 @@ int load_all(){
 /*
  * Just for unzip+decrypt the check file and list the path+crc32+md5sum.
  */
-int main_list(char *fliter){
+int main_list(char *fliter, char *part){
 	int ret=0;
 	FILE *fp_info;
 	char buf[512];
@@ -1017,7 +1022,7 @@ int main_list(char *fliter){
 	unsigned int p_size;
 	int p_number;
   
-	ret = load_all();
+	ret = load_all(part);
 	if(ret != CHECK_PASS){
 		SLOGI("Load check file fail!\n");
 		return CHECK_NO_KEY;
@@ -1050,14 +1055,14 @@ int main_list(char *fliter){
 /*
  * For check the file which is new/lost/modified.
  */
-int main_check(){
+int main_check(char *part){
 	int per,cper;
 	int ret = 0;
 
 	bool realresult = true;
  
-	SLOGI("Now check begins, please wait.....\n");
-	ret = load_all();
+	SLOGI("Now check begins, please wait.....%s\n", part);
+	ret = load_all(part);
 	if(ret != CHECK_PASS){
 		SLOGI("Load check file fail!\n");
 		return false;
@@ -1066,7 +1071,10 @@ int main_check(){
 	//校验SYSTEM......
 	SLOGI("\n\n========== ========== START SYSTEM MD5 CHECK ========== ==========\n");
 	//TODO: shenpengru: need support double system partition!!!
-	if(false == crc_compare(SYSTEM_ROOT)){
+    char base[512];
+	strcpy(base, part);
+	strcat(base, "/");
+	if(false == crc_compare(base)){
 		checkResult = false;
 	}
 

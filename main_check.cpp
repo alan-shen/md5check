@@ -6,7 +6,8 @@
 
 int main(){
 	//int ret = CHECK_PASS;
-	bool ret = main_check();
+	char *part = "/system";
+	bool ret = main_check(part);
 	printf("\n\n>>>>> RESULT <<<<< %s!!\n", ret==true?"Success":"Fail");
 	
 #if 0
