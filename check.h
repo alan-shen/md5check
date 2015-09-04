@@ -2,16 +2,16 @@
 #define __CHECK__
 enum
 {
-CHECK_PASS,
-CHECK_FAIL,
-CHECK_NO_KEY,
-CHECK_OPEN_FILE_ERR,
-CHECK_MOUNT_ERR,
-CHECK_SYSTEM_FILE_NUM_ERR,
-CHECK_FILE_NOT_MATCH,
-CHECK_LOST_FILE,
-CHECK_ADD_NEW_FILE,
-CHECK_IMAGE_ERR,
+	CHECK_PASS,
+	CHECK_FAIL,
+	CHECK_NO_KEY,
+	CHECK_OPEN_FILE_ERR,
+	CHECK_MOUNT_ERR,
+	CHECK_SYSTEM_FILE_NUM_ERR,
+	CHECK_FILE_NOT_MATCH,
+	CHECK_LOST_FILE,
+	CHECK_ADD_NEW_FILE,
+	CHECK_IMAGE_ERR,
 };
 
 #define MAX_FILES_IN_SYSTEM 10000
@@ -23,30 +23,28 @@ CHECK_IMAGE_ERR,
 #define MD5_LENGTH 16
 #define DEVNAME_LENGTH 64
 typedef struct{
-unsigned int size; //length of xxx.img
-//union{
-unsigned int crc32;//crc32 checksum
-unsigned char md5[MD5_LENGTH]; //md5 checksum		
-//};
+	unsigned int size; //length of xxx.img
+	//union{
+	unsigned int crc32;//crc32 checksum
+	unsigned char md5[MD5_LENGTH]; //md5 checksum
+	//};
 }img_checksum_t;
 
 typedef struct{
-char img_devname[DEVNAME_LENGTH];
-char img_printname[DEVNAME_LENGTH];
+	char img_devname[DEVNAME_LENGTH];
+	char img_printname[DEVNAME_LENGTH];
 }img_name_t;
 
 
 #define hextoi(c) (((c)-'a'+1)>0?((c)-'a'+10):((c)-'0'))
 static void hextoi_md5(unsigned char p_crc[MD5_LENGTH*2]){
-int i = 0;
-for(;i<MD5_LENGTH;i++)
-{
-p_crc[i]=hextoi(p_crc[i*2])*16 + hextoi(p_crc[i*2+1]);
-}
+	int i = 0;
+	for(;i<MD5_LENGTH;i++){
+		p_crc[i]=hextoi(p_crc[i*2])*16 + hextoi(p_crc[i*2+1]);
+	}
 }
 
 int main_check(char *part);
 int main_list(char *fliter, char *part);
 
 #endif
-
