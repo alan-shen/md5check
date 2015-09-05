@@ -71,23 +71,26 @@ extern "C" {
  * /system/system_checksum -------> /tmp/file_count ---------> /tmp/system_dencrypt
  *                                  /tmp/doub_check
  */
-static const char  *TEMP_FILE_IN_RAM="/tmp/system_dencrypt";
-static const char    *FILE_COUNT_TMP="/tmp/file_count";
-static const char      *DYW_DOUB_TMP="/tmp/doub_check";
-static const char      *FILE_NEW_TMP="/tmp/list_new_file";
+static const char   *FILE_COUNT_ZIP="file_count";
+static const char *DOUBLE_DYW_CHECK="doub_check";
+static const char *TEMP_FILE_IN_RAM="/tmp/system_dencrypt";
+static const char   *FILE_COUNT_TMP="/tmp/file_count";
+static const char     *DYW_DOUB_TMP="/tmp/doub_check";
+static const char     *FILE_NEW_TMP="/tmp/list_new_file";
 
 /********************************************************************************************
  * Structure Define
  ********************************************************************************************/
 struct last_check_file{
-	int          n_newfile;
-	int          n_lostfile;
-	int          n_modifyfile;
-	int          n_rootfile;
-	int          file_number_to_check;
-	int          expect_file_number;
-	unsigned int file_count_check;
-	unsigned int crc_count_check;
+	int          n_newfile;           // num of new file, and record name to FILE_NEW_TMP
+	int          n_lostfile;          // num of lost file, name can find in check_map[]
+	int          n_modifyfile;        // num of modify file, name can find in check_modify[]
+	int          n_rootfile;          // num of root apk, idx is in root_to_check, name can
+                                      // find in file_to_check[]
+	int          file_number_to_check;// num of files have been checked
+	int          expect_file_number;  // num of files record in "system_checksum"
+	unsigned int file_count_check;    // crc32 code of 'file_count' record in 'system_checksum'
+	unsigned int crc_count_check;     // not use now
 };
 static struct last_check_file *check_file_result;
 
@@ -845,8 +848,6 @@ static int encrypt_file_doub_check()
 
 static int load_zip_file(char *part)
 {
-	const char *FILE_COUNT_ZIP="file_count";
-	const char *DOUBLE_DYW_CHECK="doub_check";
 	//TODO: shenpengru: need support double system partition!!!
 	//const char *ZIP_FILE_ROOT=strcat(part, "/system_checksum");
 	char *ZIP_FILE_ROOT;
@@ -1007,8 +1008,8 @@ int load_all(char *part){
 }
 
 /*
-* Just for unzip+decrypt the check file and list the path+crc32+md5sum.
-*/
+ * Just for unzip+decrypt the check file and list the path+crc32+md5sum.
+ */
 int main_list(char *fliter, char *part){
 	int ret=0;
 	FILE *fp_info;
