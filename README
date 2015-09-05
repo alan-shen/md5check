@@ -1,4 +1,13 @@
 =======================================================================================================
+在 update/roots.c 中添加新的接口:
+	ensure_path_mounted_another_system  (const char* path);
+	ensure_path_unmounted_another_system(const char* path);
+其中需要调用 update/install.c 中的接口:
+	mount_point = relocate_path(mount_point, RELOCATE_MOUNTPOINT);
+	location    = relocate_path(location,    RELOCATE_DEVICE_PATH);
+来重新载入挂载的分区和挂载点.
+
+=======================================================================================================
 Structure Of Checksum File:
 +++++++++++++++++++++++++++
 
