@@ -29,9 +29,7 @@ How to merge&enable this feature in your project?
 	   @mkdir -p $(dir $(1)) $(systemimage_intermediates) && rm -rf $(systemimage_intermediates)/system_image_info.txt
 	   $(call generate-userimage-prop-dictionary, $(systemimage_intermediates)/system_image_info.txt, \
 	       skip_fsck=true)
-	+  ifeq ($(strip $(UPDATESERVICE_HAVE_SYSTEM_MD5CHECK)),true)
-	+    python ./vendor/duokan/frameworks/base/service/updateservice/md5check/generate/gen_md5_for_system.py $(TARGET_OUT) $(TARGET_OUT)
-	+  endif
+	+  python ./vendor/duokan/frameworks/base/service/updateservice/md5check/generate/gen_md5_for_system.py $(TARGET_OUT) $(TARGET_OUT)
 	   $(hide) PATH=$(foreach p,$(INTERNAL_USERIMAGES_BINARY_PATHS),$(p):)$$PATH \
 	       ./build/tools/releasetools/build_image.py \
 	       $(TARGET_OUT) $(systemimage_intermediates)/system_image_info.txt $(1) \	
