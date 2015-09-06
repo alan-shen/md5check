@@ -41,8 +41,8 @@ int main(int argc, char** argv){
 		strcpy(part, "/system");
 	}
 
-	bool ret = main_check(part);
-	printf("\n\n>>>>> RESULT <<<<< %s!!\n", ret==true?"Success":"Fail");
+	int ret = main_check(part);
+	printf("\n\n>>>>> RESULT <<<<< %s!!\n", ret==0?"Success":"Fail");
 	
 	if(part != NULL){
 		free(part);
