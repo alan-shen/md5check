@@ -790,8 +790,7 @@ static int check_file_number_insystem(int file_number)
 			if (sscanf(buf, "%d    %s %d", &p_pnumber,p_name, &p_number)== 3) {
 				if (!strcmp(p_name, "file_number_in_system_dayu")) {
 					check_file_result->expect_file_number=p_number;
-					SLOGI("\tp_number is : %d\n\tfile_number is : %d\n
-						   \tmodfy num is : %d,\n\tnewfile num is : %d\n\n",
+					SLOGI("\tp_number is : %d\n\tfile_number is : %d\n\tmodfy num is : %d,\n\tnewfile num is : %d\n\n",
 						p_number,file_number,
 						check_file_result->n_modifyfile,
 						check_file_result->n_newfile);
@@ -1056,13 +1055,13 @@ int main_list(char *fliter, char *part){
 int main_check(char *part){
 	int per,cper;
 	int ret = 0;
-	bool realresult = true;
+	int realresult = 0;
 
 	SLOGI("Now check begins, please wait.....%s\n", part);
 	ret = load_all(part);
 	if(ret != CHECK_PASS){
 		SLOGI("Load check file fail!\n");
-		return false;
+		return -1;
 	}
 
 	SLOGI("\n\n========== ========== START SYSTEM MD5 CHECK ========== ==========\n");
@@ -1071,14 +1070,14 @@ int main_check(char *part){
 	strcpy(base, part);
 	strcat(base, "/");
 	if(false == crc_compare(base)){
-		checkResult = false;
+		checkResult = -1;
 	}
 
 	check_file_result->file_number_to_check+=1;
 
 	SLOGI("\n\n========== ========== SHOW THE RESULT ====== ========== ==========\n");
 	if (check_file_number_insystem(check_file_result->file_number_to_check)!=0){
-		checkResult=false;
+		checkResult=-1;
 	}
 
 	//new
@@ -1103,7 +1102,7 @@ int main_check(char *part){
 	//for(cper=0;cper<check_file_result->file_number_to_check-1;cper++){
 	for(cper=0;cper<check_file_result->expect_file_number-1;cper++){
 		if(!test_bit_m(cper)){
-			checkResult=false;
+			checkResult=-1;
 			list_modify_file(cper);
 		}
 	}
@@ -1112,11 +1111,11 @@ int main_check(char *part){
 		SLOGI("[Report] found %d new files\n",check_file_result->n_newfile);
 	}
 	if(check_file_result->n_lostfile){
-		realresult = false;
+		realresult = -1;
 		SLOGI("[Report] found %d lost files\n",check_file_result->n_lostfile);
 	}
 	if(check_file_result->n_modifyfile){
-		realresult = false;
+		realresult = -1;
 		SLOGI("[Report] found %d modified files\n",check_file_result->n_modifyfile);
 	}
 	if(check_file_result->n_rootfile){
