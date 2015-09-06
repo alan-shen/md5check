@@ -1,13 +1,4 @@
 =======================================================================================================
-在 update/roots.c 中添加新的接口:
-	ensure_path_mounted_another_system  (const char* path);
-	ensure_path_unmounted_another_system(const char* path);
-其中需要调用 update/install.c 中的接口:
-	mount_point = relocate_path(mount_point, RELOCATE_MOUNTPOINT);
-	location    = relocate_path(location,    RELOCATE_DEVICE_PATH);
-来重新载入挂载的分区和挂载点.
-
-=======================================================================================================
 Structure Of Checksum File:
 +++++++++++++++++++++++++++
 
@@ -18,30 +9,46 @@ Structure Of Checksum File:
                                 |                                   |
                                 \___________________________________/
  
-
-=======================================================================================================
-How to generate the checksum file in your prj?
-++++++++++++++++++++++++++++++++++++++++++++++
-
-diff --git a/core/Makefile b/core/Makefile
-index 0869f11..9d54e1d 100644
---- a/core/Makefile
-+++ b/core/Makefile
-@@ -1030,7 +1030,13 @@ define build-systemimage-target
-   @mkdir -p $(dir $(1)) $(systemimage_intermediates) && rm -rf $(systemimage_intermediates)/system_image_info.txt
-   $(call generate-userimage-prop-dictionary, $(systemimage_intermediates)/system_image_info.txt, \
-       skip_fsck=true)
-   $(hide) PATH=$(foreach p,$(INTERNAL_USERIMAGES_BINARY_PATHS),$(p):)$$PATH \
-+          $(if $(filter $(strip $(MTK_EMULATOR_SUPPORT)),no),
-+            python ./system/core/md5check/generate/gen_md5_for_system.py \
-+        $(TARGET_OUT) \
-+        $(TARGET_OUT),
-+            @echo no need generate checksum)
-       ./build/tools/releasetools/build_image.py \
-
 =======================================================================================================
 
 # mi_md5chk     -    for comapre checksum in "/system/system_checksum" with loacl system files.
 # mi_md5list    -	 for list the checksum in "/system/system_checksum"
+
+=======================================================================================================
+How to merge&enable this feature in your project?
++++++++++++++++++++++++++++++++++++++++++++++++++
+
+1.call 'gen_md5_for_system.py' to generate md5 checksum.
+
+	---------------------------------------------------------------------------------------------------
+	diff --git a/core/Makefile b/core/Makefile
+	index ba71b5a..5fd6c04 100644
+	--- a/core/Makefile
+	+++ b/core/Makefile
+	@@ -1032,6 +1032,9 @@ define build-systemimage-target
+	   @mkdir -p $(dir $(1)) $(systemimage_intermediates) && rm -rf $(systemimage_intermediates)/system_image_info.txt
+	   $(call generate-userimage-prop-dictionary, $(systemimage_intermediates)/system_image_info.txt, \
+	       skip_fsck=true)
+	+  ifeq ($(strip $(UPDATESERVICE_HAVE_SYSTEM_MD5CHECK)),true)
+	+    python ./vendor/duokan/frameworks/base/service/updateservice/md5check/generate/gen_md5_for_system.py $(TARGET_OUT) $(TARGET_OUT)
+	+  endif
+	   $(hide) PATH=$(foreach p,$(INTERNAL_USERIMAGES_BINARY_PATHS),$(p):)$$PATH \
+	       ./build/tools/releasetools/build_image.py \
+	       $(TARGET_OUT) $(systemimage_intermediates)/system_image_info.txt $(1) \	
+	---------------------------------------------------------------------------------------------------
+
+2.define the macro '' to 'true' to enable this feature.
+
+	---------------------------------------------------------------------------------------------------
+	diff --git a/BoardConfigCommon.mk b/BoardConfigCommon.mk
+	index 5fd0e82..f0dc8d5 100644
+	--- a/BoardConfigCommon.mk
+	+++ b/BoardConfigCommon.mk
+	@@ -245,3 +245,4 @@ UPDATESERVICE_HAVE_SELINUX := true
+	 UPDATESERVICE_BLOCK_DEV_PATH_PREFIX := "\"/dev/block/platform/mstar_mci.0/by-name/\""
+	 UPDATESERVICE_BOOTENV_PREFIX := "\"bootenv.var\""
+	 UPDATESERVICE_HAVE_BLUETOOTH := true
+	+UPDATESERVICE_HAVE_SYSTEM_MD5CHECK := true
+	---------------------------------------------------------------------------------------------------
 
 =======================================================================================================
